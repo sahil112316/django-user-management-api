@@ -1,15 +1,17 @@
 
-from django.core.mail import send_mail
-from django.utils import timezone
 from datetime import timedelta
 import secrets
 
-from rest_framework import generics, status
+from django.core.mail import send_mail
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
-from .models import User, EmailOTP
+from .models import User
 from .serializers import (
     LoginSerializer,
     SendOTPSerializer,
@@ -21,17 +23,23 @@ from .serializers import (
 )
 
 
-# 1. Create User
-class UserListCreateAPIView(generics.ListCreateAPIView):
-    queryset = User.objects.filter(status='Active')
+# 1. List and Create Users
+class UserListCreateAPIView(APIView):
 
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return UserCreateSerializer
-        return UserSerializer
+    def get(self, request):
+        users = User.objects.filter(status='Active')
+        serializer = UserSerializer(
+            users,
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request):
+        serializer = UserCreateSerializer(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
@@ -49,7 +57,7 @@ class UserListCreateAPIView(generics.ListCreateAPIView):
 
         response_serializer = UserSerializer(
             user,
-            context=self.get_serializer_context()
+            context={'request': request}
         )
 
         return Response(
@@ -59,25 +67,61 @@ class UserListCreateAPIView(generics.ListCreateAPIView):
 
 
 # 2. Retrieve, Update and Soft Delete User
-class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class UserDetailAPIView(APIView):
 
-    def get_queryset(self):
-        if self.request.method in ['PATCH', 'PUT', 'DELETE']:
-            return User.objects.all()
+    def get(self, request, pk):
+        user = get_object_or_404(
+            User,
+            pk=pk,
+            status='Active'
+        )
+        serializer = UserSerializer(
+            user,
+            context={'request': request}
+        )
+        return Response(serializer.data)
 
-        return User.objects.filter(status='Active')
+    def put(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
 
-    def get_serializer_class(self):
-        if self.request.method in ['PUT', 'PATCH']:
-            return UserUpdateSerializer
-        return UserSerializer
+        serializer = UserUpdateSerializer(
+            user,
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-    def destroy(self, request, *args, **kwargs):
-        user = self.get_object()
+        return Response(
+            UserSerializer(
+                user,
+                context={'request': request}
+            ).data
+        )
+
+    def patch(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+
+        serializer = UserUpdateSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            UserSerializer(
+                user,
+                context={'request': request}
+            ).data
+        )
+
+    def delete(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
         user.status = 'Inactive'
-        user.save()
+        user.save(update_fields=['status'])
 
         return Response(
             {'message': 'User deactivated successfully.'},
@@ -120,13 +164,17 @@ class SendOTPAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        otp = f"{secrets.randbelow(1000000):06d}"
+        otp = f'{secrets.randbelow(1000000):06d}'
 
-        EmailOTP.objects.create(
-            user=user,
-            otp=otp,
-            purpose='verification',
-            expires_at=timezone.now() + timedelta(minutes=5)
+        user.otp = otp
+        user.otp_purpose = 'verification'
+        user.otp_expires_at = timezone.now() + timedelta(minutes=5)
+        user.save(
+            update_fields=[
+                'otp',
+                'otp_purpose',
+                'otp_expires_at'
+            ]
         )
 
         send_mail(
@@ -165,20 +213,27 @@ class VerifyOTPAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        try:
-            otp_record = EmailOTP.objects.filter(
-                user=user,
-                otp=otp,
-                purpose='verification',
-                expires_at__gt=timezone.now()
-            ).latest('id')
-        except EmailOTP.DoesNotExist:
+        if (
+            user.otp != otp
+            or user.otp_purpose != 'verification'
+            or user.otp_expires_at is None
+            or user.otp_expires_at <= timezone.now()
+        ):
             return Response(
                 {'message': 'Invalid or expired OTP.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        otp_record.delete()
+        user.otp = ''
+        user.otp_purpose = ''
+        user.otp_expires_at = None
+        user.save(
+            update_fields=[
+                'otp',
+                'otp_purpose',
+                'otp_expires_at'
+            ]
+        )
 
         return Response(
             {'message': 'OTP verified successfully.'},
@@ -186,7 +241,7 @@ class VerifyOTPAPIView(APIView):
         )
 
 
-# 6. Forgot Password 
+# 6. Forgot Password
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -207,13 +262,17 @@ class ForgotPasswordAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        otp = f"{secrets.randbelow(1000000):06d}"
+        otp = f'{secrets.randbelow(1000000):06d}'
 
-        EmailOTP.objects.create(
-            user=user,
-            otp=otp,
-            purpose='password_reset',
-            expires_at=timezone.now() + timedelta(minutes=5)
+        user.otp = otp
+        user.otp_purpose = 'password_reset'
+        user.otp_expires_at = timezone.now() + timedelta(minutes=5)
+        user.save(
+            update_fields=[
+                'otp',
+                'otp_purpose',
+                'otp_expires_at'
+            ]
         )
 
         send_mail(
@@ -248,7 +307,6 @@ class ResetPasswordAPIView(APIView):
         otp = serializer.validated_data['otp']
         new_password = serializer.validated_data['new_password']
 
-        # Find active user
         try:
             user = User.objects.get(
                 email=email,
@@ -260,26 +318,22 @@ class ResetPasswordAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Verify password
-        try:
-            otp_record = EmailOTP.objects.filter(
-                user=user,
-                otp=otp,
-                purpose='password_reset',
-                expires_at__gt=timezone.now()
-            ).latest('id')
-        except EmailOTP.DoesNotExist:
+        if (
+            user.otp != otp
+            or user.otp_purpose != 'password_reset'
+            or user.otp_expires_at is None
+            or user.otp_expires_at <= timezone.now()
+        ):
             return Response(
                 {'message': 'Invalid or expired password reset OTP.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Update password 
         user.set_password(new_password)
+        user.otp = ''
+        user.otp_purpose = ''
+        user.otp_expires_at = None
         user.save()
-
-        
-        otp_record.delete()
 
         return Response(
             {'message': 'Password reset successfully.'},

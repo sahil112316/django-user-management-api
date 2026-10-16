@@ -85,20 +85,20 @@ class User(AbstractUser):
 
     email = models.EmailField(unique=True)
 
-
-from django.conf import settings
-from django.db import models
-
-
-class EmailOTP(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
+    # OTP fields
+    otp = models.CharField(
+        max_length=6,
+        blank=True,
+        default=''
     )
-    otp = models.CharField(max_length=6)
-    purpose = models.CharField(max_length=20, default='verification')
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
 
-    def __str__(self):
-        return f"OTP for {self.user.email}"
+    otp_purpose = models.CharField(
+        max_length=20,
+        blank=True,
+        default=''
+    )
+
+    otp_expires_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
