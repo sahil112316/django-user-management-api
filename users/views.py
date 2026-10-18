@@ -1,4 +1,3 @@
-
 from datetime import timedelta
 import secrets
 
@@ -25,6 +24,8 @@ from .serializers import (
 
 # 1. List and Create Users
 class UserListCreateAPIView(APIView):
+    # Ye line HTML Form wala tab enable kar degi Browsable API me
+    serializer_class = UserCreateSerializer
 
     def get(self, request):
         users = User.objects.filter(status='Active')
@@ -66,8 +67,10 @@ class UserListCreateAPIView(APIView):
         )
 
 
-# 2. Retrieve, Update and Soft Delete User
+# 2. Retrieve, Update and Soft Delete User  
 class UserDetailAPIView(APIView):
+    # PUT/PATCH ke liye Form enable karne ke liye
+    serializer_class = UserUpdateSerializer
 
     def get(self, request, pk):
         user = get_object_or_404(
@@ -132,6 +135,7 @@ class UserDetailAPIView(APIView):
 # 3. Login with JWT
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -146,6 +150,7 @@ class LoginAPIView(APIView):
 # 4. Send Verification OTP
 class SendOTPAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = SendOTPSerializer
 
     def post(self, request):
         serializer = SendOTPSerializer(data=request.data)
@@ -194,6 +199,7 @@ class SendOTPAPIView(APIView):
 # 5. Verify OTP
 class VerifyOTPAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = VerifyOTPSerializer
 
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
@@ -244,6 +250,7 @@ class VerifyOTPAPIView(APIView):
 # 6. Forgot Password
 class ForgotPasswordAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = SendOTPSerializer
 
     def post(self, request):
         serializer = SendOTPSerializer(data=request.data)
@@ -298,6 +305,7 @@ class ForgotPasswordAPIView(APIView):
 # 7. Reset Password
 class ResetPasswordAPIView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
 
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
