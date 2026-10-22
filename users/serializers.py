@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, Client
 
 
 # 1. User Serializer
@@ -95,7 +95,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
 
 
-# 4. Login Serializer
+# 4 Login Serializer
 class LoginSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
@@ -136,18 +136,19 @@ class LoginSerializer(serializers.Serializer):
         }
 
 
-# 5. Send OTP Serializer
+# 5 Send OTP Serializer
 class SendOTPSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
 
 
-
+# 6 Verify OTP Serializer
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(min_length=6, max_length=6)
 
 
+# 7 Reset Password Serializer
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(min_length=6, max_length=6)
@@ -155,3 +156,30 @@ class ResetPasswordSerializer(serializers.Serializer):
         write_only=True,
         min_length=8
     )
+
+
+
+# 8  Client Serializer
+class ClientSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+    modified_by_name = serializers.ReadOnlyField(source='modified_by.username')
+
+    class Meta:
+        model = Client
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'address',
+            'country',
+            'contact_no',
+            'email_id',
+            'status',
+            'created_at',
+            'updated_at',
+            'created_by',
+            'modified_by',
+            'created_by_name',
+            'modified_by_name',
+        ]
+        read_only_fields = ['created_by', 'modified_by', 'created_at', 'updated_at']

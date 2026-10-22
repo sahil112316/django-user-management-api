@@ -1,6 +1,9 @@
 from pathlib import Path
 import os
 
+from datetime import timedelta
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
@@ -24,7 +27,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "rest_framework",
+    "rest_framework_simplejwt",
     "users",
+    
 ]
 
 
@@ -127,4 +132,10 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
+}
+
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # Access token ko 60 min (1 ghanta) kar diya
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),     # Refresh token 1 din tak valid rahega
 }
