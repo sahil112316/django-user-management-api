@@ -136,6 +136,6 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # Access token ko 60 min (1 ghanta) kar diya
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),     # Refresh token 1 din tak valid rahega
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),     
 }

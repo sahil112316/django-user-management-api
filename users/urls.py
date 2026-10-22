@@ -31,7 +31,7 @@ urlpatterns = [
     # Reset Password API
     path('auth/reset-password/', ResetPasswordAPIView.as_view(), name='reset-password'),
 
-    # Client CRUD APIs (Moved to the last)
+    # Client CRUD APIs 
     path('clients/', ClientListCreateAPIView.as_view(), name='client-list-create'),
     path('clients/<int:pk>/', ClientDetailAPIView.as_view(), name='client-detail'),
 ]
