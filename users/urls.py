@@ -4,6 +4,8 @@ from .views import (
     UserDetailAPIView,
     ClientListCreateAPIView,
     ClientDetailAPIView,
+    ProjectListCreateAPIView,
+    ProjectDetailAPIView,
     LoginAPIView,
     SendOTPAPIView,
     VerifyOTPAPIView,
@@ -34,4 +36,8 @@ urlpatterns = [
     # Client CRUD APIs 
     path('clients/', ClientListCreateAPIView.as_view(), name='client-list-create'),
     path('clients/<int:pk>/', ClientDetailAPIView.as_view(), name='client-detail'),
+
+    # Project CRUD APIs
+    path('projects/', ProjectListCreateAPIView.as_view(), name='project-list-create'),
+    path('projects/<int:pk>/', ProjectDetailAPIView.as_view(), name='project-detail'),
 ]

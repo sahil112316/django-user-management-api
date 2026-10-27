@@ -12,7 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .models import User, Client
+from .models import User, Client, Project
 from .serializers import (
     LoginSerializer,
     SendOTPSerializer,
@@ -22,10 +22,11 @@ from .serializers import (
     VerifyOTPSerializer,
     ResetPasswordSerializer,
     ClientSerializer,
+    ProjectSerializer,
 )
 
 
-# 1 Client Pagination
+# 1. Pagination
 class ClientPagination(PageNumberPagination):
     page_size = 2
     page_size_query_param = 'page_size'
@@ -34,8 +35,8 @@ class ClientPagination(PageNumberPagination):
 
 # 2. List and Create Users 
 class UserListCreateAPIView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [AllowAny]
     serializer_class = UserCreateSerializer
 
     def get(self, request):
@@ -57,18 +58,6 @@ class UserListCreateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        send_mail(
-            subject='Welcome to Our Platform',
-            message=(
-                f'Hello {user.first_name},\n\n'
-                'Welcome! Your account has been created successfully.\n\n'
-                'Thank you for joining us.'
-            ),
-            from_email=None,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
         response_serializer = UserSerializer(
             user,
             context={'request': request}
@@ -82,8 +71,8 @@ class UserListCreateAPIView(APIView):
 
 # 3. Retrieve, Update and Soft Delete User 
 class UserDetailAPIView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [AllowAny]
     serializer_class = UserUpdateSerializer
 
     def get(self, request, pk):
@@ -295,7 +284,7 @@ class ForgotPasswordAPIView(APIView):
                 'otp_expires_at'
             ]
         )
-
+    
         send_mail(
             subject='Password Reset OTP',
             message=(
@@ -436,5 +425,82 @@ class ClientDetailAPIView(APIView):
         client.save(update_fields=['status'])
         return Response(
             {'message': 'Client deactivated successfully.'},
+            status=status.HTTP_200_OK
+        )
+
+
+# 11. Project List and Create API 
+class ProjectListCreateAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get(self, request):
+        projects = Project.objects.filter(status='Active').order_by('id')
+        paginator = ClientPagination()
+        paginated_projects = paginator.paginate_queryset(projects, request)
+        serializer = ProjectSerializer(
+            paginated_projects,
+            many=True,
+            context={'request': request}
+        )
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request):
+        serializer = ProjectSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user if request.user.is_authenticated else None
+        serializer.save(created_by=user, modified_by=user, status='Active')
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# 12. Project Detail and Update and Soft Delete and Reactivate API
+class ProjectDetailAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get(self, request, pk):
+        project = get_object_or_404(Project, pk=pk)
+        serializer = ProjectSerializer(
+            project,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        project = get_object_or_404(Project, pk=pk)
+        serializer = ProjectSerializer(
+            project,
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user if request.user.is_authenticated else None
+        serializer.save(modified_by=user)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        project = get_object_or_404(Project, pk=pk)
+        serializer = ProjectSerializer(
+            project,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user if request.user.is_authenticated else None
+        serializer.save(modified_by=user)
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        project = get_object_or_404(Project, pk=pk, status='Active')
+        project.status = 'Inactive'
+        project.save(update_fields=['status'])
+        return Response(
+            {'message': 'Project deactivated successfully.'},
             status=status.HTTP_200_OK
         )
