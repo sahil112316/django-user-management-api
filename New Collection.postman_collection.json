@@ -1,0 +1,2406 @@
+{
+  "info": {
+    "_collection_link": "https://go.postman.co/collection/56213307-a0cbafa0-fa27-400a-b959-1a0bb16ad069?source=collection_link",
+    "_exporter_id": "56213307",
+    "_postman_id": "a0cbafa0-fa27-400a-b959-1a0bb16ad069",
+    "name": "New Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": "create data",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"talkwithme046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\": \"Sahil\",\r\n    \"last_name\": \"Kumar\",\r\n    \"email\": \"sahilkumar.chd043@gmail.com\",\r\n    \"username\": \"sahil_kumar\",\r\n    \"profiles\": {\r\n        \"role\": \"Manger\",\r\n        \"theme\": \"dark\",\r\n        \"preferences\": {\r\n            \"notifications\": true\r\n        }\r\n    },\r\n    \"date_of_birth\": \"2002-07-27\",\r\n    \"gender\": \"Male\",\r\n    \"nationality\": \"Indian\",\r\n    \"blood_group\": \"B+\",\r\n    \"phone\": \"9876543210\",\r\n    \"permanent_address\": \"Village Baihanji, Mandi, HP\",\r\n    \"current_address\": \"Chandigarh, Mohali\",\r\n    \"emergency_contact_name\": \"Ram\",\r\n    \"emergency_contact_number\": \"9123456789\",\r\n    \"emergency_contact_relationship\": \"Brother\",\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"tarush@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/?page=2",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000//api/users/?page=2"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/?page_size=3",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"talkwithme046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "3"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000//api/users/?page_size=3"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"talkwithme046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"nationality\":\"China\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\":\"Dinesh\",\r\n    \"last_name\":\"Thakur\",\r\n    \"nationality\":\"China\",\r\n    \"gender\":\"Male\",\r\n    \"blood_group\":\"A+\"\r\n\r\n}"
+            },
+            "header": [],
+            "method": "PUT",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/?page_size=4",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "4"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000//api/users/?page_size=4"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/auth/send-otp/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\":\"talkwithme046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "auth",
+                "send-otp",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/auth/send-otp/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/auth/verify-otp/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\":\"talkwithme046@gmail.com\",\r\n    \"otp\":\"146931\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "auth",
+                "verify-otp",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/auth/verify-otp/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/auth/forgot-password/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\":\"talkwithme046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "auth",
+                "forgot-password",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/auth/forgot-password/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/auth/reset-password/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\":\"talkwithme046@gmail.com\",\r\n    \"otp\":\"813232\",\r\n    \"new_password\":\"Dinesh@123\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "auth",
+                "reset-password",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/auth/reset-password/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\":\"Dinesh\",\r\n    \"last_name\":\"Thakur\",\r\n    \"nationality\":\"China\",\r\n    \"gender\":\"Male\",\r\n    \"blood_group\":\"A+\"\r\n\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/1/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "",
+                "api",
+                "users",
+                "1",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000//api/users/1/"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "Django Backend API Collection User Model"
+    },
+    {
+      "item": [
+        {
+          "name": " http://127.0.0.1:8000/api/auth/login/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"talkwithme046@gmail.com\",\r\n    \"password\":\"Dinesh@123\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/login/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\": \"Rahul\",\r\n    \"last_name\": \"Sharma\",\r\n    \"address\": \"Sector 17, Chandigarh\",\r\n    \"country\": \"India\",\r\n    \"contact_no\": \"9876543210\",\r\n    \"email_id\": \"rahul.sharma@example.com\",\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\": \"Rajan\",\r\n    \"last_name\": \"Sharma\",\r\n    \"address\": \"Chandigarh\",\r\n    \"country\": \"India\",\r\n    \"contact_no\": \"9876543210\",\r\n    \"email_id\": \"rajan.sharma@example.com\",\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\": \"Ram\",\r\n    \"last_name\": \"Sharma\",\r\n    \"address\": \"Chandigarh\",\r\n    \"country\": \"India\",\r\n    \"contact_no\": \"9876543210\",\r\n    \"email_id\": \"ramsharma@example.com\",\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/?page_size=3",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "3"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000/api/clients/?page_size=3"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/?page=2",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000/api/clients/?page=2"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/2/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "2",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/2/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/2/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"last_name\":\"Verma\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "2",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/2/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/2/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"first_name\":\"RAJAN\",\r\n    \"last_name\":\"Verma\",\r\n    \"country\":\"INDIA\"\r\n}"
+            },
+            "header": [],
+            "method": "PUT",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "2",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/2/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/2/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "header": [],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "2",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/2/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/2/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                "2",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/2/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": " http://127.0.0.1:8000/api/clients/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0fwf}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "clients",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/clients/"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "Django Backend API Collection Client Model"
+    },
+    {
+      "item": [
+        {
+          "name": "New Request",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"sahilkumar.chd046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/forgot-password/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"sahilkumar.chd046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/send-otp/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"sahilkumar.chd046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/send-otp/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"sahilkumar.chd046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-otp",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/send-otp/"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\": \"sahilkumar.chd046@gmail.com\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/forgot-password/"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "Django Backend API Collection 12-Hour Limit Tests"
+    },
+    {
+      "item": [
+        {
+          "name": "New Request",
+          "request": {
+            "header": [],
+            "method": "GET",
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": ""
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"email\":\"sahilkumar19604@gmail.com\",\r\n    \"password\":\"Sahil@123\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/auth/login/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"project_title\": \"E-Commerce Web App\",\r\n    \"project_type\": \"Web Development\",\r\n    \"date_of_completion\": \"2026-12-31\",\r\n    \"project_status\": \"In Progress\",\r\n    \"status\": \"Active\",\r\n    \"client\": 5,\r\n    \"assigned_manager\": \"Sahil123\"\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"project_title\": \"E-Commerce Web App\",\r\n    \"project_type\": \"Web Development\",\r\n    \"date_of_completion\": \"2026-12-31\",\r\n    \"project_status\": \"In Progress\",\r\n    \"status\": \"Active\",\r\n    \"client\": 5,\r\n    \"assigned_manager\": 8\r\n}"
+            },
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"project_status\": \"Completed\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "5",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/5/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"project_title\": \"Updated E-Commerce App\",\r\n    \"project_type\": \"Full Stack\",\r\n    \"date_of_completion\": \"2026-12-31\",\r\n    \"project_status\": \"Completed\",\r\n    \"status\": \"Active\",\r\n    \"client\": 5\r\n}"
+            },
+            "header": [],
+            "method": "PUT",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "5",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/5/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "header": [],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "5",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/5/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "5",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "raw": "http://127.0.0.1:8000/api/projects/5/"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n    \"status\": \"Active\"\r\n}"
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "19"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000/api/projects/?page_size=19"
+            }
+          },
+          "response": []
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "name": " http://127.0.0.1:8000//api/users/",
+          "protocolProfileBehavior": {
+            "disableCookies": false,
+            "followRedirects": true,
+            "maxResponseSize": 52428800,
+            "protocolVersion": "auto",
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "bearer": [
+                {
+                  "key": "token",
+                  "type": "string",
+                  "value": "{{vault:json_web_token_0elu}}"
+                }
+              ],
+              "type": "bearer"
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": ""
+            },
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "path": [
+                "api",
+                "projects",
+                ""
+              ],
+              "port": "8000",
+              "protocol": "http",
+              "query": [
+                {
+                  "key": "page",
+                  "value": "3"
+                }
+              ],
+              "raw": "http://127.0.0.1:8000/api/projects/?page=3"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "Django Backend API Collection project model"
+    }
+  ]
+}
