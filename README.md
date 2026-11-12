@@ -1,96 +1,136 @@
-# Custom User Management & Authentication API
+# User Management & Authentication API
 
-## Project Overview
-This project is built using Django and Django REST Framework. It provides APIs for user management, authentication, OTP verification, password reset, and email notifications.
+A RESTful API built using Python, Django and Django REST Framework for managing users, profiles, clients, projects and project tasks, with JWT authentication and email-based OTP verification.
 
 ## Technologies Used
+
 - Python
 - Django
 - Django REST Framework
 - SQLite
-- JWT Authentication
-- Simple JWT
+- JWT Authentication (Simple JWT)
 - Pillow
-- SMTP / Email Backend
+- SMTP / Django Email Backend
 
 ## Features
-- Custom User Model inherited from `AbstractUser`
-- Create, list, retrieve, update, and soft-delete users
-- User status management (Active / Inactive)
+
+### User Management
+- Custom User Model using `AbstractUser`
+- Create, list, retrieve and update users
+- Soft-delete users by changing their status to Inactive
+- Search, filtering and pagination
 - Password hashing
+
+### Authentication
 - Login using email and password
-- JWT authentication
+- JWT access and refresh tokens
 - Email OTP verification
-- Forgot password using OTP
-- Reset password
+- Forgot password and reset password using OTP
+
+### Profiles
+- Six protected default profiles:
+  - Super Admin
+  - Admin
+  - Manager
+  - Team Leader
+  - Developer
+  - Human Resource
+- Create and manage custom profiles
+- Prevent modification or deletion of protected default profiles
+
+### Client and Project Management
+- Client CRUD APIs
+- Project CRUD APIs
+- Assign project managers (Manager role only)
+- Project search and filtering
+- Project attachments
+- Soft-delete projects
+
+### Project Tasks
+- Create and manage project tasks
+- Assign developers and team leaders
+- Task comments
+
+### Email Notifications
 - Welcome email when a user is created
-- REST API testing using Postman
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/users/` | List active users |
-| POST | `/api/users/` | Create a user |
-| GET | `/api/users/<id>/` | Retrieve user details |
-| PUT | `/api/users/<id>/` | Update user details |
-| PATCH | `/api/users/<id>/` | Partially update user details |
-| DELETE | `/api/users/<id>/` | Soft-delete / deactivate a user |
-| POST | `/api/auth/login/` | Login and obtain JWT tokens |
-| POST | `/api/auth/send-otp/` | Send verification OTP |
-| POST | `/api/auth/verify-otp/` | Verify OTP |
-| POST | `/api/auth/forgot-password/` | Request password-reset OTP |
-| POST | `/api/auth/reset-password/` | Reset password |
+- OTP emails
+- Password reset emails
+- Project notification emails for clients and assigned managers
 
 ## Installation and Setup
 
-1. Clone or download the project.
-2. Open the project folder in the terminal.
-3. Create and activate a virtual environment.
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/sahil112316/django-user-management-api.git
+cd django-user-management-api
+```
+
+### 2. Create a virtual environment
 
 ```bash
 python -m venv venv
 ```
 
-Windows PowerShell:
+Activate it on Windows PowerShell:
 
 ```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
-4. Install dependencies.
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-5. Apply database migrations.
+### 4. Apply database migrations
 
 ```bash
-python manage.py makemigrations
 python manage.py migrate
 ```
 
-6. Start the development server.
+### 5. Start the development server
 
 ```bash
 python manage.py runserver
 ```
 
-7. Open the API in your browser or test it using Postman.
+API base URL:
 
-```text
-http://127.0.0.1:8000/api/users/
-```
+`http://127.0.0.1:8000/api/`
 
-## Testing
-The APIs can be tested using Postman or the Django REST Framework browsable API. Test successful requests and invalid inputs, including incorrect passwords, duplicate email addresses, invalid or expired OTPs, and password reset.
+## API Testing
 
-## Notes
-- User passwords are stored as hashes.
-- Soft deletion changes the user's status to Inactive instead of permanently deleting the record.
-- Configure email settings before testing email-based features.
-- Keep email credentials and other secrets private. Do not commit them to GitHub.
+Use Postman or the Django REST Framework browsable API to test the endpoints.
+
+Test cases should include:
+- Valid and invalid login credentials
+- Duplicate email addresses
+- Valid, invalid and expired OTPs
+- Password reset
+- JWT-protected endpoints
+- Default profile protection
+- Invalid project manager assignments
+- Search, filtering and pagination
+- Project and task operations
+
+## Email Configuration
+
+Configure the following environment variables before testing email-based features:
+
+- `EMAIL_HOST_USER`
+- `EMAIL_HOST_PASSWORD`
+
+Keep email credentials and secret keys private. Never commit actual credentials to GitHub.
+
+## Important Notes
+
+- The project uses SQLite as its default database.
+- Existing migration files are included in the repository.
+- User and project soft deletion preserves database records.
+- Protected default profiles cannot be modified or deleted.
 
 ## Author
+
 Sahil Kumar

@@ -2,15 +2,14 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 
+#Default Profile
 
 def get_default_profile():
     return {
         "role": "Standard",
-        "theme": "light",
-        "preferences": {}
+        "is_active": True,
+        "is_default": True
     }
-
-
 class User(AbstractUser):
     username = models.CharField(
         max_length=150,
@@ -23,6 +22,14 @@ class User(AbstractUser):
         default=get_default_profile,
         null=True,
         blank=True
+    )
+
+    profile = models.ForeignKey(
+        'Profile',
+        on_delete=models.PROTECT,
+        null=False,
+        blank=False,
+        related_name='users'
     )
 
     date_of_birth = models.DateField(
@@ -63,7 +70,6 @@ class User(AbstractUser):
             ('AB+', 'AB+'),
             ('AB-', 'AB-'),
             ('O+', 'O+'),
-            ('O-', 'O-'),
         ],
         null=True,
         blank=True
@@ -114,13 +120,19 @@ class User(AbstractUser):
         blank=True
     )
 
+    is_deleted = models.BooleanField(default=False)
+
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     email = models.EmailField(
         unique=True,
         null=True,
         blank=True
     )
 
-    # OTP fields
     otp = models.CharField(
         max_length=6,
         null=True,
@@ -137,104 +149,85 @@ class User(AbstractUser):
         blank=True
     )
 
-    
     otp_request_timestamps = models.JSONField(
         default=list,
         null=True,
         blank=True
     )
 
+    # Audit Fields
+
+    created_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users_created'
+    )
+
+    modified_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users_modified'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+#Client Model
 
 class Client(models.Model):
-    first_name = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-    
-    last_name = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-    
-    address = models.TextField(
-        null=True,
-        blank=True
-    )
-    
-    country = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-    
-    contact_no = models.CharField(
-        max_length=15,
-        null=True,
-        blank=True
-    )
-    
-    email_id = models.EmailField(
-        unique=True,
-        null=True,
-        blank=True
-    )
-
+    first_name = models.CharField(max_length=50, null=True, blank=True)
+    last_name = models.CharField(max_length=50, null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    country = models.CharField(max_length=50, null=True, blank=True)
+    contact_no = models.CharField(max_length=15, null=True, blank=True)
+    email_id = models.EmailField(unique=True, null=True, blank=True)
     status = models.CharField(
         max_length=10,
-        choices=[
-            ('Active', 'Active'),
-            ('Inactive', 'Inactive'),
-        ],
+        choices=[('Active', 'Active'), ('Inactive', 'Inactive')],
         default='Active',
         null=True,
         blank=True
     )
-
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_clients'
-    )
-    
-    modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='modified_clients'
-    )
-    
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        null=True,
-        blank=True
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        null=True,
-        blank=True
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_clients')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='modified_clients')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
 
+# Project Model
+
 class Project(models.Model):
+
     project_title = models.CharField(
         max_length=150,
         null=True,
         blank=True
     )
 
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
     project_type = models.CharField(
         max_length=100,
         null=True,
         blank=True
+    )
+
+    start_date = models.DateField(
+        auto_now_add=True
     )
 
     date_of_completion = models.DateField(
@@ -248,7 +241,7 @@ class Project(models.Model):
             ('Pending', 'Pending'),
             ('In Progress', 'In Progress'),
             ('Completed', 'Completed'),
-            ('Cancelled', 'Cancelled'),
+            ('Cancelled', 'Cancelled')
         ],
         default='Pending',
         null=True,
@@ -259,7 +252,7 @@ class Project(models.Model):
         max_length=10,
         choices=[
             ('Active', 'Active'),
-            ('Inactive', 'Inactive'),
+            ('Inactive', 'Inactive')
         ],
         default='Active',
         null=True,
@@ -298,6 +291,21 @@ class Project(models.Model):
         related_name='modified_projects'
     )
 
+    is_deleted = models.BooleanField(default=False)
+
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_projects'
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         null=True,
@@ -312,3 +320,234 @@ class Project(models.Model):
 
     def __str__(self):
         return self.project_title if self.project_title else "Project"
+
+
+# ProjectAttachment Model
+
+class ProjectAttachment(models.Model):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='attachments'
+    )
+
+    attachment = models.FileField(
+        upload_to='project_attachments/'
+    )
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_project_attachments'
+    )
+
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment for {self.project}"
+
+# Project Task Model
+
+class ProjectTask(models.Model):
+
+    TASK_STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('In Progress', 'In Progress'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    task_title = models.CharField(
+        max_length=255
+    )
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='tasks'
+    )
+
+    developers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='assigned_project_tasks'
+    )
+
+    team_leader = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='led_project_tasks',
+        blank=True
+    )
+
+    start_date = models.DateField(auto_now_add=True)
+
+    completion_date = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    deadline_date = models.DateField()
+
+    task_status = models.CharField(
+        max_length=20,
+        choices=TASK_STATUS_CHOICES,
+        default='Pending'
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_project_tasks'
+    )
+
+    modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='modified_project_tasks'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project', 'task_title'],
+                name='unique_task_title_per_project'
+            )
+        ]
+
+    def __str__(self):
+        return self.task_title
+
+# Task Comment Model
+
+class TaskComment(models.Model):
+
+    task = models.ForeignKey(
+        ProjectTask,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_comments'
+    )
+
+    comment = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Comment on {self.task.task_title}"
+
+# . Profile QuerySet
+
+class ProfileQuerySet(models.QuerySet):
+
+    def delete(self):
+        default_profiles = self.filter(is_default=True)
+
+        if default_profiles.exists():
+            raise models.ProtectedError(
+                "Default profiles cannot be deleted.",
+                list(default_profiles)
+            )
+
+        return super().delete()
+
+    def update(self, **kwargs):
+        if self.filter(is_default=True).exists():
+            raise models.ProtectedError(
+                "Default profiles cannot be updated.",
+                list(self.filter(is_default=True))
+            )
+
+        return super().update(**kwargs)
+
+# 2. Profile Model
+
+class Profile(models.Model):
+
+    DEFAULT_PROFILES = [
+        'Super Admin',
+        'Admin',
+        'Manager',
+        'Team Leader',
+        'Developer',
+        'Human Resource',
+    ]
+
+    name = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    profile_data = models.JSONField(
+        default=get_default_profile,
+        blank=True
+    )
+
+    description = models.TextField(
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=[
+            ('Active', 'Active'),
+            ('Inactive', 'Inactive'),
+        ],
+        default='Active'
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    objects = ProfileQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+
+        if self.pk:
+            old_profile = Profile.objects.filter(
+                pk=self.pk
+            ).first()
+
+            if old_profile and old_profile.is_default:
+                raise models.ProtectedError(
+                    "Default profiles cannot be updated.",
+                    [old_profile]
+                )
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+
+        if self.is_default:
+            raise models.ProtectedError(
+                "Default profiles cannot be deleted.",
+                [self]
+            )
+
+        return super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} - {self.profile_data.get('role', self.name)}"

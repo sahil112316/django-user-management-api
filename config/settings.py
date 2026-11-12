@@ -28,8 +28,8 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "rest_framework_simplejwt",
-    "users",
-    
+    "users.apps.UsersConfig",
+
 ]
 
 
@@ -74,7 +74,7 @@ DATABASES = {
 }
 
 
-# Caching 
+# Caching
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
@@ -141,10 +141,12 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
+
+    "EXCEPTION_HANDLER": "users.exceptions.custom_exception_handler",
 }
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),     
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }

@@ -9,3 +9,11 @@ db.sqlite3
 
 media/
 profile_images/
+
+# Local database backups and review files
+*.sqlite3
+/migration_review.txt
+/tatus --short
+
+# Temporary migration test settings
+/config/test_settings.py
