@@ -1112,7 +1112,7 @@ class ProfileCRUDSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'role', 'is_default', 'status']
+        fields = ['id', 'role', 'is_default']
         read_only_fields = ['id', 'is_default']
 
     # Only string input is allowed

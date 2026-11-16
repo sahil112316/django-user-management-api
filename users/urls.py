@@ -25,6 +25,8 @@ from .views import (
     TaskCommentListCreateAPIView,
 )
 
+from .exceptions import invalid_api_url
+
 
 urlpatterns = [
 
@@ -140,5 +142,12 @@ urlpatterns = [
         'projects/restore/',
         ProjectRestoreAPIView.as_view(),
         name='project-restore'
+    ),
+
+    # Handle Invalid API URLs
+    path(
+        '<path:invalid_path>',
+        invalid_api_url,
+        name='invalid-api-url'
     ),
 ]
