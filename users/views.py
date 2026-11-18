@@ -46,6 +46,7 @@ from .serializers import (
     RestoreIDsSerializer,
     ProjectTaskListQuerySerializer,
     TaskCommentListQuerySerializer,
+    UserClientSerializer,
 )
 
 
@@ -53,7 +54,7 @@ from .serializers import (
 # 1 Pagination Configuration
 
 class ClientPagination(PageNumberPagination):
-    page_size = 2
+    page_size = 50
     page_size_query_param = 'page_size'
     max_page_size = 100
 
@@ -68,7 +69,8 @@ class UserListCreateAPIView(APIView):
 
     # Check Super Admin / Admin Permission
     def has_user_management_permission(self, request):
-        role = request.user.profile.name
+        profile = getattr(request.user, 'profile', None)
+        role = profile.name if profile else None
         return role in ['Super Admin', 'Admin']
 
     # User List, Search, Filters and Pagination
@@ -80,15 +82,6 @@ class UserListCreateAPIView(APIView):
                 {'error': 'Only Super Admin and Admin can access users.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-
-        # Overall User Counts
-        total_users = User.objects.count()
-        active_users = User.objects.filter(
-            status__iexact='Active'
-        ).count()
-        inactive_users = User.objects.filter(
-            status__iexact='Inactive'
-        ).count()
 
         # Status and Date Query Validation
         query_serializer = UserListQuerySerializer(
@@ -108,7 +101,33 @@ class UserListCreateAPIView(APIView):
         date_from = validated_filters.get('date_from', '')
         date_to = validated_filters.get('date_to', '')
 
-        users = User.objects.filter(
+        # Profile Filter
+        profile = request.query_params.get('profile', '').strip()
+
+        # Separate Users and Clients Through Profile
+        if profile.lower() == 'client':
+            base_users = User.objects.filter(
+                profile__name__iexact='client'
+            )
+            is_client = True
+        else:
+            base_users = User.objects.exclude(
+                profile__name__iexact='client'
+            )
+            is_client = False
+
+        # Overall User / Client Counts
+        total_count = base_users.count()
+
+        active_count = base_users.filter(
+            status__iexact='Active'
+        ).count()
+
+        inactive_count = base_users.filter(
+            status__iexact='Inactive'
+        ).count()
+
+        users = base_users.filter(
             status__iexact=user_status
         ).order_by('id')
 
@@ -125,11 +144,9 @@ class UserListCreateAPIView(APIView):
             )
 
         # Profile Filter
-        profile = request.query_params.get('profile')
-
-        if profile:
+        if profile and profile.lower() != 'client':
             users = users.filter(
-                profile__name__iexact=profile.strip()
+                profile__name__iexact=profile
             )
 
         # Gender Filter
@@ -171,8 +188,12 @@ class UserListCreateAPIView(APIView):
         paginator = ClientPagination()
         paginated_users = paginator.paginate_queryset(users, request)
 
-        # Serialization
-        serializer = UserSerializer(
+        
+        serializer_class = (
+            UserClientSerializer if is_client else UserSerializer
+        )
+
+        serializer = serializer_class(
             paginated_users,
             many=True,
             context={'request': request}
@@ -180,24 +201,40 @@ class UserListCreateAPIView(APIView):
 
         response = paginator.get_paginated_response(serializer.data)
 
-        # Add Overall Counts
-        response.data.update({
-            'total_users': total_users,
-            'active_users': active_users,
-            'inactive_users': inactive_users
-        })
+        # Add Overall User / Client Counts
+        if is_client:
+            response.data.update({
+                'total_clients': total_count,
+                'active_clients': active_count,
+                'inactive_clients': inactive_count
+            })
+        else:
+            response.data.update({
+                'total_users': total_count,
+                'active_users': active_count,
+                'inactive_users': inactive_count
+            })
 
         return response
 
-    # Create User
+    # Create User / Client Through Profile
     def post(self, request):
 
+        # Check Super Admin / Admin Permission
         if not self.has_user_management_permission(request):
             return Response(
                 {'error': 'Only Super Admin and Admin can create users.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
+    
+        if not isinstance(request.data, dict):
+            return Response(
+                {'error': 'Invalid request data. Expected a JSON object.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate and Create User / Client
         serializer = UserCreateSerializer(
             data=request.data,
             context={'request': request}
@@ -210,11 +247,14 @@ class UserListCreateAPIView(APIView):
             modified_by=request.user
         )
 
+        # Return Same User Format for User and Client
+        response_serializer = UserCreateSerializer(
+            user,
+            context={'request': request}
+        )
+
         return Response(
-            UserSerializer(
-                user,
-                context={'request': request}
-            ).data,
+            response_serializer.data,
             status=status.HTTP_201_CREATED
         )
 #3.User Retrieve, Update, Partial Update and Soft Delete API
@@ -227,13 +267,20 @@ class UserDetailAPIView(APIView):
 
     # Check Super Admin / Admin Permission
     def has_user_management_permission(self, request):
-        role = request.user.profile.name
+        profile = getattr(request.user, 'profile', None)
+        role = profile.name if profile else None
         return role in ['Super Admin', 'Admin']
 
-    # Get Active User Details
+    # Check Client by Profile
+    def is_client_user(self, user):
+        return (
+            user.profile is not None
+            and user.profile.name.strip().lower() == 'client'
+        )
+
+    # Get Active User / Client Details
     def get(self, request, pk):
 
-        # Check Super Admin / Admin Permission
         if not self.has_user_management_permission(request):
             return Response(
                 {'error': 'Only Super Admin and Admin can access users.'},
@@ -246,14 +293,19 @@ class UserDetailAPIView(APIView):
             status='Active'
         )
 
-        serializer = UserSerializer(
+        serializer_class = (
+            UserClientSerializer if self.is_client_user(user)
+            else UserSerializer
+        )
+
+        serializer = serializer_class(
             user,
             context={'request': request}
         )
 
         return Response(serializer.data)
 
-    # Update Active User (PUT)
+    # Update Active User / Client (PUT)
     def put(self, request, pk):
 
         if not self.has_user_management_permission(request):
@@ -262,15 +314,41 @@ class UserDetailAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        if not isinstance(request.data, dict):
+            return Response(
+                {'error': 'Invalid request data. Expected a JSON object.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if request.data.get('action') == 'delete':
 
             user = get_object_or_404(
                 User,
                 pk=pk,
-                status='Active',
-                is_deleted=False
+                status='Active'
             )
 
+            # Client Soft Delete
+            if self.is_client_user(user):
+                user.status = 'Inactive'
+                user.modified_by = request.user
+
+                user.save(update_fields=[
+                    'status',
+                    'modified_by',
+                    'updated_at'
+                ])
+
+                return Response(
+                    {
+                        'message': 'Client deleted successfully.',
+                        'id': user.id,
+                        'status': user.status
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            # User Soft Delete
             user.status = 'Inactive'
             user.is_deleted = True
             user.deleted_at = timezone.now()
@@ -301,24 +379,33 @@ class UserDetailAPIView(APIView):
             status='Active'
         )
 
-        serializer = UserUpdateSerializer(
+        serializer_class = (
+            UserClientSerializer if self.is_client_user(user)
+            else UserUpdateSerializer
+        )
+
+        serializer = serializer_class(
             user,
             data=request.data,
             context={'request': request}
         )
 
         serializer.is_valid(raise_exception=True)
-
         serializer.save(modified_by=request.user)
 
+        response_serializer_class = (
+            UserClientSerializer if self.is_client_user(user)
+            else UserSerializer
+        )
+
         return Response(
-            UserSerializer(
+            response_serializer_class(
                 user,
                 context={'request': request}
             ).data
         )
 
-    # Partially Update Active User (PATCH)
+    
     def patch(self, request, pk):
 
         if not self.has_user_management_permission(request):
@@ -333,7 +420,12 @@ class UserDetailAPIView(APIView):
             status='Active'
         )
 
-        serializer = UserUpdateSerializer(
+        serializer_class = (
+            UserClientSerializer if self.is_client_user(user)
+            else UserUpdateSerializer
+        )
+
+        serializer = serializer_class(
             user,
             data=request.data,
             partial=True,
@@ -341,18 +433,21 @@ class UserDetailAPIView(APIView):
         )
 
         serializer.is_valid(raise_exception=True)
-
         serializer.save(modified_by=request.user)
 
+        response_serializer_class = (
+            UserClientSerializer if self.is_client_user(user)
+            else UserSerializer
+        )
+
         return Response(
-            UserSerializer(
+            response_serializer_class(
                 user,
                 context={'request': request}
             ).data
         )
 
-
-# 4. User Dynamic Profile Configuration API
+# 4. User JSON Profile Configuration API
 
 class UserProfileDetailAPIView(APIView):
     renderer_classes = [JSONRenderer]
@@ -402,7 +497,6 @@ class UserProfileDetailAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-
 # 5. User Login and JWT Authentication API
 
 class LoginAPIView(APIView):
@@ -417,7 +511,6 @@ class LoginAPIView(APIView):
             serializer.validated_data,
             status=status.HTTP_200_OK
         )
-
 
 # 6.Send Verification OTP API
 
@@ -459,7 +552,6 @@ class SendOTPAPIView(APIView):
             {'message': 'OTP sent successfully.'},
             status=status.HTTP_200_OK
         )
-
 
 # 7. Verify OTP API
 
@@ -549,7 +641,6 @@ class ForgotPasswordAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-
 # 9. Reset Password API
 
 class ResetPasswordAPIView(APIView):
@@ -590,7 +681,6 @@ class ResetPasswordAPIView(APIView):
             {'message': 'Password reset successfully.'},
             status=status.HTTP_200_OK
         )
-
 
 # 10. Client List, Search, Filters, Pagination and Create API
 
@@ -665,7 +755,7 @@ class ClientListCreateAPIView(APIView):
             request
         )
 
-        # Serialization
+    
         serializer = ClientSerializer(
             paginated_clients,
             many=True,
@@ -696,7 +786,6 @@ class ClientListCreateAPIView(APIView):
             ).data,
             status=status.HTTP_201_CREATED
         )
-
 
 # 11. Retrieve, Update and Soft Delete Client API
 
@@ -752,8 +841,6 @@ class ClientDetailAPIView(APIView):
         user = request.user if request.user.is_authenticated else None
         serializer.save(modified_by=user)
         return Response(serializer.data)
-
-
 
 #12. Project List, Search, Filters, Pagination and Create API
 
@@ -998,7 +1085,6 @@ class ProjectListCreateAPIView(APIView):
             request
         )
 
-        # 16. Serialization
         serializer = ProjectSerializer(
             paginated_projects,
             many=True,
@@ -1012,7 +1098,7 @@ class ProjectListCreateAPIView(APIView):
 
         serializer = ProjectSerializer(
             data=request.data,
-            context={'request': request}
+            context={'request': request} 
         )
 
         serializer.is_valid(raise_exception=True)
@@ -1108,7 +1194,6 @@ class ProjectDetailAPIView(APIView):
         user = request.user if request.user.is_authenticated else None
         serializer.save(modified_by=user)
         return Response(serializer.data)
-
 
 # 14. Profile List and Create API
 
@@ -1287,8 +1372,6 @@ class ProfileDetailAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-
-
 # 16 Get Users by Profile API
 
 class ProfileUsersAPIView(APIView):
@@ -1361,14 +1444,22 @@ class UserRestoreAPIView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            if user.status == 'Active':
+            if user.status == 'Active' and not user.is_deleted:
                 return Response(
                     {"message": "User is already active."},
                     status=status.HTTP_200_OK
                 )
 
             user.status = 'Active'
-            user.save(update_fields=['status'])
+            user.is_deleted = False
+            user.deleted_at = None
+
+            user.save(update_fields=[
+                'status',
+                'is_deleted',
+                'deleted_at',
+                'updated_at'
+            ])
 
             return Response(
                 {
@@ -1391,8 +1482,9 @@ class UserRestoreAPIView(APIView):
         user_ids = query_serializer.validated_data['ids']
 
         users = User.objects.filter(
-            id__in=user_ids,
-            status='Inactive'
+            id__in=user_ids
+        ).filter(
+            Q(status='Inactive') | Q(is_deleted=True)
         )
 
         if not users.exists():
@@ -1401,7 +1493,11 @@ class UserRestoreAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        restored_count = users.update(status='Active')
+        restored_count = users.update(
+            status='Active',
+            is_deleted=False,
+            deleted_at=None
+        )
 
         return Response(
             {
@@ -1410,7 +1506,6 @@ class UserRestoreAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
 
 # 18. Restore Inactive Clients API
 
@@ -1633,7 +1728,6 @@ class ProjectTaskListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-
 # 21 Project Task Retrieve, Update,Partial Update and Delete API
 
 class ProjectTaskDetailAPIView(APIView):
@@ -1712,7 +1806,6 @@ class ProjectTaskDetailAPIView(APIView):
             {'message': 'Project task deleted successfully.'},
             status=status.HTTP_200_OK
         )
-
 
 # 22. Task Comment List and Create API
 

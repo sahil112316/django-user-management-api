@@ -779,11 +779,28 @@ class ProjectClientSerializer(serializers.ModelSerializer):
         model = Client
         fields = ['id', 'first_name', 'last_name', 'email']
 
-#14.Client Details Field
+# 14. Client Details Field
 class ClientDetailsField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return ProjectClientSerializer(value).data
+# 15. User Client Details Serializer
+class UserClientDetailsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email']
+
+
+# 16. User Client Details Field
+class UserClientDetailsField(serializers.PrimaryKeyRelatedField):
+
+    def use_pk_only_optimization(self):
+        return False
+
+    def to_representation(self, value):
+        return UserClientDetailsSerializer(value).data
+
 
 
 #15. Project User Details Serializer
@@ -831,9 +848,17 @@ class ProjectAttachmentSerializer(serializers.ModelSerializer):
 # 17. Send Project Creation Email Notification to Client
 def send_client_project_email(project):
 
-    client = project.client
+    client = project.client or project.user_client
 
-    if not client or not client.email_id:
+    if not client:
+        return
+
+    client_email = (
+        getattr(client, 'email_id', None)
+        or getattr(client, 'email', None)
+    )
+
+    if not client_email:
         return
 
     manager = project.assigned_manager
@@ -862,7 +887,7 @@ def send_client_project_email(project):
         subject,
         message,
         settings.DEFAULT_FROM_EMAIL,
-        [client.email_id],
+        [client_email],
         fail_silently=True
     )
 
@@ -875,13 +900,18 @@ def send_manager_project_email(project):
     if not manager or not manager.email:
         return
 
-    client = project.client
+    client = project.client or project.user_client
 
     if client:
         client_name = (
             f"{client.first_name or ''} {client.last_name or ''}"
         ).strip()
-        client_email = client.email_id or "Not available"
+
+        client_email = (
+            getattr(client, 'email_id', None)
+            or getattr(client, 'email', None)
+            or "Not available"
+        )
     else:
         client_name = "Not assigned"
         client_email = "Not available"
@@ -906,7 +936,6 @@ def send_manager_project_email(project):
         [manager.email],
         fail_silently=True
     )
-
 
 #19. Project List Query Parameter Validation
 class ProjectListQuerySerializer(serializers.Serializer):
@@ -1076,6 +1105,8 @@ class ProjectTaskListQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid developer_id.')
         return value
 
+
+
 # 21. Project Serializer
 class ProjectSerializer(serializers.ModelSerializer):
 
@@ -1088,6 +1119,18 @@ class ProjectSerializer(serializers.ModelSerializer):
             'does_not_exist': 'Client does not exist.',
             'incorrect_type': 'Client ID must be a valid integer.',
             'null': 'Client ID cannot be null.'
+        }
+    )
+
+    user_client_id = UserClientDetailsField(
+        source='user_client',
+        queryset=User.objects.filter(profile__name='Client'),
+        required=False,
+        allow_null=True,
+        error_messages={
+            'does_not_exist': 'User Client does not exist.',
+            'incorrect_type': 'User Client ID must be a valid integer.',
+            'null': 'User Client ID cannot be null.'
         }
     )
 
@@ -1163,7 +1206,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True,
         error_messages={
-            'invalid': 'Attachment IDs must be valid JSON data.',
+            'invalid': 'Attachment IDs cannot be null.',
             'null': 'Attachment IDs cannot be null.'
         }
     )
@@ -1171,7 +1214,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'id', 'client_id', 'assigned_manager',
+            'id', 'client_id', 'user_client_id', 'assigned_manager',
             'created_by', 'updated_by',
             'title', 'type', 'date_of_completion',
             'status', 'created_at', 'updated_at',
@@ -1186,7 +1229,37 @@ class ProjectSerializer(serializers.ModelSerializer):
             'is_deleted', 'deleted_at', 'deleted_by'
         ]
 
-    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        if instance.client_id:
+            data.pop('user_client_id', None)
+
+        elif instance.user_client_id:
+            data.pop('client_id', None)
+
+        return data
+
+    def validate(self, attrs):
+
+        client = attrs.get('client', serializers.empty)
+        user_client = attrs.get('user_client', serializers.empty)
+
+        if (
+            client is not serializers.empty and client is not None
+            and user_client is not serializers.empty and user_client is not None
+        ):
+            raise serializers.ValidationError({
+                'client_id': 'Assign either old Client or User Client, not both.'
+            })
+
+        if client is not serializers.empty and client is not None:
+            attrs['user_client'] = None
+
+        elif user_client is not serializers.empty and user_client is not None:
+            attrs['client'] = None
+
+        return attrs
 
     def validate_title(self, value):
 
@@ -1329,7 +1402,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             attachment.delete()
 
         return instance
-
 #22. Manager Details Serializer
 class ManagerSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()

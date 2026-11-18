@@ -79,6 +79,7 @@ class Project(BaseModel):
     project_status = models.CharField(max_length=30, choices=[('Pending', 'Pending'), ('In Progress', 'In Progress'), ('Completed', 'Completed'), ('Cancelled', 'Cancelled')], default='Pending', null=True, blank=True)
     status = models.CharField(max_length=10, choices=[('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', null=True, blank=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='projects')
+    user_client = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='user_client_projects',limit_choices_to={'profile__name': 'Client'})
     assigned_manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_projects')
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
