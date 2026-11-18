@@ -1,10 +1,10 @@
 
 import logging
 
-from django.http import JsonResponse
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
+from django.http import JsonResponse
 
 
 logger = logging.getLogger(__name__)
@@ -18,30 +18,64 @@ def custom_exception_handler(exc, context):
 
         error_data = response.data
 
-        if isinstance(error_data, dict) and 'detail' in error_data:
-            message = str(error_data['detail'])
-            errors = None
-        else:
-            if response.status_code == status.HTTP_400_BAD_REQUEST:
-                message = "Invalid request data."
-            elif response.status_code == status.HTTP_404_NOT_FOUND:
+        # Validation errors
+        if response.status_code == status.HTTP_400_BAD_REQUEST:
+
+            result = {
+                "success": False,
+                "message": "Validation failed.",
+                "errors": error_data
+            }
+
+        # Not found errors
+        elif response.status_code == status.HTTP_404_NOT_FOUND:
+
+            if isinstance(error_data, dict) and 'detail' in error_data:
+                message = str(error_data['detail'])
+            else:
                 message = "Requested resource was not found."
-            elif response.status_code == status.HTTP_401_UNAUTHORIZED:
-                message = "Authentication credentials were not provided or are invalid."
-            elif response.status_code == status.HTTP_403_FORBIDDEN:
-                message = "You do not have permission to perform this action."
+
+            result = {
+                "success": False,
+                "message": message,
+                "errors": error_data if not (
+                    isinstance(error_data, dict) and 'detail' in error_data
+                ) else {}
+            }
+
+        # Authentication errors
+        elif response.status_code == status.HTTP_401_UNAUTHORIZED:
+
+            result = {
+                "success": False,
+                "message": "Authentication credentials were not provided or are invalid.",
+                "errors": {}
+            }
+
+        # Permission errors
+        elif response.status_code == status.HTTP_403_FORBIDDEN:
+
+            result = {
+                "success": False,
+                "message": "You do not have permission to perform this action.",
+                "errors": {}
+            }
+
+        # Other handled errors
+        else:
+
+            if isinstance(error_data, dict) and 'detail' in error_data:
+                message = str(error_data['detail'])
             else:
                 message = "Request could not be processed."
 
-            errors = error_data
-
-        result = {
-            "success": False,
-            "message": message
-        }
-
-        if errors is not None:
-            result["errors"] = errors
+            result = {
+                "success": False,
+                "message": message,
+                "errors": error_data if isinstance(error_data, dict) else {
+                    "detail": error_data
+                }
+            }
 
         return Response(
             result,
@@ -49,6 +83,7 @@ def custom_exception_handler(exc, context):
             headers=response.headers
         )
 
+    # Unexpected server errors
     logger.error(
         "Unexpected API error",
         exc_info=(type(exc), exc, exc.__traceback__)
@@ -57,18 +92,36 @@ def custom_exception_handler(exc, context):
     return Response(
         {
             "success": False,
-            "message": "An unexpected error occurred. Please try again later."
+            "message": "An unexpected error occurred. Please try again later.",
+            "errors": {}
         },
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
     )
 
+
+# Invalid API URL Handler
 
 def invalid_api_url(request, invalid_path=None):
 
     return JsonResponse(
         {
             "success": False,
-            "message": "Invalid API URL or resource not found."
+            "message": "Invalid API URL or resource not found.",
+            "errors": {}
+        },
+        status=404
+    )
+
+
+# Project-level 404 Handler
+
+def custom_404_handler(request, exception):
+
+    return JsonResponse(
+        {
+            "success": False,
+            "message": "Requested URL was not found.",
+            "errors": {}
         },
         status=404
     )

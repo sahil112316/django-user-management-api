@@ -30,21 +30,35 @@ from .exceptions import invalid_api_url
 
 urlpatterns = [
 
-    # User CRUD APIs
+    # User CRUD APIs (User and Client)
     path(
         'users/',
         UserListCreateAPIView.as_view(),
         name='user-list-create'
     ),
+
+    # User Restore APIs
     path(
-        'users/<int:pk>/',
-        UserDetailAPIView.as_view(),
-        name='user-detail'
+        'users/restore/',
+        UserRestoreAPIView.as_view(),
+        name='user-restore'
     ),
+    path(
+        'users/<int:pk>/restore/',
+        UserRestoreAPIView.as_view(),
+        name='user-restore-detail'
+    ),
+
+    # User Detail APIs
     path(
         'users/<int:pk>/profile/',
         UserProfileDetailAPIView.as_view(),
         name='user-profile-detail'
+    ),
+    path(
+        'users/<int:pk>/',
+        UserDetailAPIView.as_view(),
+        name='user-detail'
     ),
 
     # Authentication APIs
@@ -62,16 +76,11 @@ urlpatterns = [
         name='reset-password'
     ),
 
-    # Client CRUD APIs
+    # Project Restore API
     path(
-        'clients/',
-        ClientListCreateAPIView.as_view(),
-        name='client-list-create'
-    ),
-    path(
-        'clients/<int:pk>/',
-        ClientDetailAPIView.as_view(),
-        name='client-detail'
+        'projects/restore/',
+        ProjectRestoreAPIView.as_view(),
+        name='project-restore'
     ),
 
     # Project CRUD APIs
@@ -117,17 +126,7 @@ urlpatterns = [
         name='profile-detail'
     ),
 
-    # Restore APIs
-    path(
-        'users/restore/',
-        UserRestoreAPIView.as_view(),
-        name='user-restore'
-    ),
-    path(
-        'users/<int:pk>/restore/',
-        UserRestoreAPIView.as_view(),
-        name='user-restore-detail'
-    ),
+    # Old Client Restore APIs
     path(
         'clients/restore/',
         ClientRestoreAPIView.as_view(),
@@ -138,10 +137,17 @@ urlpatterns = [
         ClientRestoreAPIView.as_view(),
         name='client-restore-detail'
     ),
+
+    # Old Client CRUD APIs
     path(
-        'projects/restore/',
-        ProjectRestoreAPIView.as_view(),
-        name='project-restore'
+        'clients/',
+        ClientListCreateAPIView.as_view(),
+        name='client-list-create'
+    ),
+    path(
+        'clients/<int:pk>/',
+        ClientDetailAPIView.as_view(),
+        name='client-detail'
     ),
 
     # Handle Invalid API URLs
