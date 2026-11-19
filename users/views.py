@@ -17,6 +17,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.db.models.deletion import ProtectedError
+from rest_framework.exceptions import ValidationError
 
 from .models import (
     User, Client, Project, Profile,
@@ -48,8 +49,6 @@ from .serializers import (
     TaskCommentListQuerySerializer,
     UserClientSerializer,
 )
-
-
 
 # 1 Pagination Configuration
 
@@ -188,7 +187,6 @@ class UserListCreateAPIView(APIView):
         paginator = ClientPagination()
         paginated_users = paginator.paginate_queryset(users, request)
 
-        
         serializer_class = (
             UserClientSerializer if is_client else UserSerializer
         )
@@ -227,10 +225,13 @@ class UserListCreateAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-    
-        if not isinstance(request.data, dict):
+        request_data_serializer = UserCreateSerializer()
+
+        try:
+            request_data_serializer.validate_request_data(request.data)
+        except ValidationError as exc:
             return Response(
-                {'error': 'Invalid request data. Expected a JSON object.'},
+                {'error': str(exc.detail[0])},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -257,8 +258,8 @@ class UserListCreateAPIView(APIView):
             response_serializer.data,
             status=status.HTTP_201_CREATED
         )
-#3.User Retrieve, Update, Partial Update and Soft Delete API
 
+#3.User Retrieve, Update, Partial Update and Soft Delete API
 class UserDetailAPIView(APIView):
     renderer_classes = [JSONRenderer]
     authentication_classes = [JWTAuthentication]
@@ -281,9 +282,12 @@ class UserDetailAPIView(APIView):
     # Get Active User / Client Details
     def get(self, request, pk):
 
-        if not self.has_user_management_permission(request):
+        if (
+            not self.has_user_management_permission(request)
+            and request.user.pk != pk
+        ):
             return Response(
-                {'error': 'Only Super Admin and Admin can access users.'},
+                {'error': 'You can only access your own data.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -308,19 +312,24 @@ class UserDetailAPIView(APIView):
     # Update Active User / Client (PUT)
     def put(self, request, pk):
 
-        if not self.has_user_management_permission(request):
-            return Response(
-                {'error': 'Only Super Admin and Admin can update or delete users.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        request_data_serializer = UserUpdateSerializer()
 
-        if not isinstance(request.data, dict):
+        try:
+            request_data_serializer.validate_request_data(request.data)
+        except ValidationError as exc:
             return Response(
-                {'error': 'Invalid request data. Expected a JSON object.'},
+                {'error': str(exc.detail[0])},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Delete Only Admin / Super Admin
         if request.data.get('action') == 'delete':
+
+            if not self.has_user_management_permission(request):
+                return Response(
+                    {'error': 'Only Super Admin and Admin can delete users.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
             user = get_object_or_404(
                 User,
@@ -351,13 +360,11 @@ class UserDetailAPIView(APIView):
             # User Soft Delete
             user.status = 'Inactive'
             user.is_deleted = True
-            user.deleted_at = timezone.now()
             user.modified_by = request.user
 
             user.save(update_fields=[
                 'status',
                 'is_deleted',
-                'deleted_at',
                 'modified_by',
                 'updated_at'
             ])
@@ -367,10 +374,19 @@ class UserDetailAPIView(APIView):
                     'message': 'User deleted successfully.',
                     'id': user.id,
                     'status': user.status,
-                    'is_deleted': user.is_deleted,
-                    'deleted_at': user.deleted_at
+                    'is_deleted': user.is_deleted
                 },
                 status=status.HTTP_200_OK
+            )
+
+        # Allow Admin / Super Admin or Own Data Update
+        if (
+            not self.has_user_management_permission(request)
+            and request.user.pk != pk
+        ):
+            return Response(
+                {'error': 'You can only update your own data.'},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         user = get_object_or_404(
@@ -405,12 +421,16 @@ class UserDetailAPIView(APIView):
             ).data
         )
 
-    
+    # Update Active User / Client (PATCH)
     def patch(self, request, pk):
 
-        if not self.has_user_management_permission(request):
+        # Allow Admin / Super Admin or Own Data Update
+        if (
+            not self.has_user_management_permission(request)
+            and request.user.pk != pk
+        ):
             return Response(
-                {'error': 'Only Super Admin and Admin can update users.'},
+                {'error': 'You can only update your own data.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -446,7 +466,6 @@ class UserDetailAPIView(APIView):
                 context={'request': request}
             ).data
         )
-
 # 4. User JSON Profile Configuration API
 
 class UserProfileDetailAPIView(APIView):
@@ -897,6 +916,36 @@ class ProjectListCreateAPIView(APIView):
             status__iexact=project_record_status
         ).order_by('id')
 
+        # Role-Based Project Access
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role in ['Super Admin', 'Admin']:
+            pass
+
+        elif role == 'Manager':
+            projects = projects.filter(
+                assigned_manager=user
+            )
+
+        elif role == 'Developer':
+            projects = projects.filter(
+                tasks__developers=user
+            ).distinct()
+
+        elif role == 'Team Leader':
+            projects = projects.filter(
+                tasks__team_leader=user
+            ).distinct()
+
+        elif role == 'Client':
+            projects = projects.filter(
+                user_client=user
+            )
+
+        else:
+            projects = projects.none()
+
         # 2. Search Filter
         search = request.query_params.get('search', '').strip()
 
@@ -904,7 +953,7 @@ class ProjectListCreateAPIView(APIView):
             for word in search.split():
                 projects = projects.filter(
                     Q(project_title__icontains=word) |
-                    Q(project_type__icontains=word) |
+                    Q(project_type_master__name__icontains=word) |
                     Q(description__icontains=word) |
                     Q(client__first_name__icontains=word) |
                     Q(client__last_name__icontains=word) |
@@ -932,7 +981,7 @@ class ProjectListCreateAPIView(APIView):
 
         if project_type:
             projects = projects.filter(
-                project_type__icontains=project_type
+                project_type_master__name__icontains=project_type
             )
 
         # 5. Description Filter
@@ -952,7 +1001,7 @@ class ProjectListCreateAPIView(APIView):
 
         if project_status:
             projects = projects.filter(
-                project_status__iexact=project_status
+                project_status_master__name__iexact=project_status
             )
 
         # 7. Client ID Filter
@@ -1098,7 +1147,7 @@ class ProjectListCreateAPIView(APIView):
 
         serializer = ProjectSerializer(
             data=request.data,
-            context={'request': request} 
+            context={'request': request}
         )
 
         serializer.is_valid(raise_exception=True)
@@ -1116,7 +1165,6 @@ class ProjectListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-
 # 13.Project Retrieve, Update, Partial Update and Soft Delete API
 
 class ProjectDetailAPIView(APIView):
@@ -1126,22 +1174,59 @@ class ProjectDetailAPIView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     serializer_class = ProjectSerializer
 
+    def get_user_projects(self, request):
+
+        projects = Project.objects.all()
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role in ['Super Admin', 'Admin']:
+            pass
+
+        elif role == 'Manager':
+            projects = projects.filter(
+                assigned_manager=user
+            )
+
+        elif role == 'Developer':
+            projects = projects.filter(
+                tasks__developers=user
+            ).distinct()
+
+        elif role == 'Team Leader':
+            projects = projects.filter(
+                tasks__team_leader=user
+            ).distinct()
+
+        elif role == 'Client':
+            projects = projects.filter(
+                user_client=user
+            )
+
+        else:
+            projects = projects.none()
+
+        return projects
+
     def get(self, request, pk):
         project = get_object_or_404(
-            Project,
-            pk=pk,
-            status='Active'
+            self.get_user_projects(request),
+            pk=pk
         )
+
         serializer = ProjectSerializer(
             project,
             context={'request': request}
         )
+
         return Response(serializer.data)
 
     def put(self, request, pk):
+
         if request.data.get('action') == 'delete':
             project = get_object_or_404(
-                Project,
+                self.get_user_projects(request),
                 pk=pk,
                 status='Active',
                 is_deleted=False
@@ -1149,14 +1234,10 @@ class ProjectDetailAPIView(APIView):
 
             project.status = 'Inactive'
             project.is_deleted = True
-            project.deleted_at = timezone.now()
-            project.deleted_by = request.user
 
             project.save(update_fields=[
                 'status',
-                'is_deleted',
-                'deleted_at',
-                'deleted_by'
+                'is_deleted'
             ])
 
             return Response(
@@ -1164,37 +1245,50 @@ class ProjectDetailAPIView(APIView):
                     "message": "Project deleted successfully.",
                     "id": project.id,
                     "status": project.status,
-                    "is_deleted": project.is_deleted,
-                    "deleted_at": project.deleted_at,
-                    "deleted_by": project.deleted_by_id
+                    "is_deleted": project.is_deleted
                 },
                 status=status.HTTP_200_OK
             )
 
-        project = get_object_or_404(Project, pk=pk)
+        project = get_object_or_404(
+            self.get_user_projects(request),
+            pk=pk
+        )
+
         serializer = ProjectSerializer(
             project,
             data=request.data,
             context={'request': request}
         )
+
         serializer.is_valid(raise_exception=True)
+
         user = request.user if request.user.is_authenticated else None
+
         serializer.save(modified_by=user)
+
         return Response(serializer.data)
 
     def patch(self, request, pk):
-        project = get_object_or_404(Project, pk=pk)
+        project = get_object_or_404(
+            self.get_user_projects(request),
+            pk=pk
+        )
+
         serializer = ProjectSerializer(
             project,
             data=request.data,
             partial=True,
             context={'request': request}
         )
-        serializer.is_valid(raise_exception=True)
-        user = request.user if request.user.is_authenticated else None
-        serializer.save(modified_by=user)
-        return Response(serializer.data)
 
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user if request.user.is_authenticated else None
+
+        serializer.save(modified_by=user)
+
+        return Response(serializer.data)    
 # 14. Profile List and Create API
 
 class ProfileListAPIView(APIView):
@@ -1452,12 +1546,10 @@ class UserRestoreAPIView(APIView):
 
             user.status = 'Active'
             user.is_deleted = False
-            user.deleted_at = None
 
             user.save(update_fields=[
                 'status',
                 'is_deleted',
-                'deleted_at',
                 'updated_at'
             ])
 
@@ -1495,8 +1587,7 @@ class UserRestoreAPIView(APIView):
 
         restored_count = users.update(
             status='Active',
-            is_deleted=False,
-            deleted_at=None
+            is_deleted=False
         )
 
         return Response(
@@ -1506,7 +1597,6 @@ class UserRestoreAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
 # 18. Restore Inactive Clients API
 
 class ClientRestoreAPIView(APIView):
@@ -1611,9 +1701,7 @@ class ProjectRestoreAPIView(APIView):
 
         restored_count = projects.update(
             status='Active',
-            is_deleted=False,
-            deleted_at=None,
-            deleted_by=None
+            is_deleted=False
         )
 
         return Response(
@@ -1623,7 +1711,6 @@ class ProjectRestoreAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
 # 20 Project Task List, Search, Filter and Create API
 
 class ProjectTaskListCreateAPIView(APIView):
@@ -1640,6 +1727,36 @@ class ProjectTaskListCreateAPIView(APIView):
         ).prefetch_related(
             'developers'
         ).order_by('id')
+
+        # User-wise Task Filtering
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role in ['Super Admin', 'Admin']:
+            pass
+
+        elif role == 'Manager':
+            tasks = tasks.filter(
+                project__assigned_manager=user
+            )
+
+        elif role == 'Developer':
+            tasks = tasks.filter(
+                developers=user
+            )
+
+        elif role == 'Team Leader':
+            tasks = tasks.filter(
+                team_leader=user
+            )
+
+        elif role == 'Client' or user.is_client:
+            tasks = tasks.filter(
+                project__user_client=user
+            )
+
+        else:
+            tasks = tasks.none()
 
         # Search Filter
         search = request.query_params.get('search', '').strip()
@@ -1683,7 +1800,9 @@ class ProjectTaskListCreateAPIView(APIView):
         ).strip()
 
         if task_status:
-            tasks = tasks.filter(task_status__iexact=task_status)
+            tasks = tasks.filter(
+                task_status_master__name__iexact=task_status
+            )
 
         # Developer ID Filter
         developer_id = query_serializer.validated_data.get(
@@ -1728,7 +1847,7 @@ class ProjectTaskListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-# 21 Project Task Retrieve, Update,Partial Update and Delete API
+# 21. Project Task Detail API
 
 class ProjectTaskDetailAPIView(APIView):
 
@@ -1737,12 +1856,49 @@ class ProjectTaskDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectTaskSerializer
 
+    def get_user_tasks(self, request):
+
+        tasks = ProjectTask.objects.select_related(
+            'project', 'created_by', 'modified_by'
+        ).prefetch_related(
+            'developers', 'team_leader'
+        )
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role in ['Super Admin', 'Admin']:
+            pass
+
+        elif role == 'Client':
+            tasks = tasks.filter(
+                project__user_client=user
+            )
+
+        elif role == 'Manager':
+            tasks = tasks.filter(
+                project__assigned_manager=user
+            )
+
+        elif role == 'Developer':
+            tasks = tasks.filter(
+                developers=user
+            )
+
+        elif role == 'Team Leader':
+            tasks = tasks.filter(
+                team_leader=user
+            )
+
+        else:
+            tasks = tasks.none()
+
+        return tasks.distinct()
+
     def get(self, request, pk):
 
         task = get_object_or_404(
-            ProjectTask.objects.select_related(
-                'project', 'created_by', 'modified_by'
-            ).prefetch_related('developers'),
+            self.get_user_tasks(request),
             pk=pk
         )
 
@@ -1755,7 +1911,10 @@ class ProjectTaskDetailAPIView(APIView):
 
     def put(self, request, pk):
 
-        task = get_object_or_404(ProjectTask, pk=pk)
+        task = get_object_or_404(
+            self.get_user_tasks(request),
+            pk=pk
+        )
 
         serializer = ProjectTaskSerializer(
             task,
@@ -1776,7 +1935,10 @@ class ProjectTaskDetailAPIView(APIView):
 
     def patch(self, request, pk):
 
-        task = get_object_or_404(ProjectTask, pk=pk)
+        task = get_object_or_404(
+            self.get_user_tasks(request),
+            pk=pk
+        )
 
         serializer = ProjectTaskSerializer(
             task,
@@ -1798,7 +1960,10 @@ class ProjectTaskDetailAPIView(APIView):
 
     def delete(self, request, pk):
 
-        task = get_object_or_404(ProjectTask, pk=pk)
+        task = get_object_or_404(
+            self.get_user_tasks(request),
+            pk=pk
+        )
 
         task.delete()
 
@@ -1819,8 +1984,23 @@ class TaskCommentListCreateAPIView(APIView):
     def get(self, request):
 
         comments = TaskComment.objects.select_related(
-            'task', 'user'
+            'task', 'user', 'task__project'
         ).order_by('id')
+
+        # Role-Based Comment Access
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role in ['Super Admin', 'Admin']:
+            accessible_tasks = ProjectTask.objects.all()
+
+        elif role == 'Client':
+            accessible_tasks = ProjectTask.objects.filter(
+                project__user_client=user
+            )
+
+        else:
+            accessible_tasks = ProjectTask.objects.none()
 
         # Task ID Filter
         query_serializer = TaskCommentListQuerySerializer(
@@ -1836,11 +2016,54 @@ class TaskCommentListCreateAPIView(APIView):
         task_id = query_serializer.validated_data.get('task_id', '')
 
         if task_id:
+
+            task = ProjectTask.objects.filter(
+                pk=int(task_id)
+            ).first()
+
+            if not task:
+                return Response(
+                    {
+                        "success": False,
+                        "message": "Task not found.",
+                        "errors": {}
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            if not accessible_tasks.filter(
+                pk=int(task_id)
+            ).exists():
+                return Response(
+                    {
+                        "success": False,
+                        "message": "Only the assigned Client can access comments for this task.",
+                        "errors": {}
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
             comments = comments.filter(task_id=int(task_id))
+
+        else:
+
+            if role not in ['Super Admin', 'Admin', 'Client']:
+                return Response(
+                    {
+                        "success": False,
+                        "message": "Only the assigned Client can access comments for this task.",
+                        "errors": {}
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            comments = comments.filter(
+                task__in=accessible_tasks
+            )
 
         paginator = ClientPagination()
         paginated_comments = paginator.paginate_queryset(
-            comments, request
+            comments.distinct(), request
         )
 
         serializer = TaskCommentSerializer(

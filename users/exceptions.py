@@ -30,7 +30,15 @@ def custom_exception_handler(exc, context):
         # Not found errors
         elif response.status_code == status.HTTP_404_NOT_FOUND:
 
-            if isinstance(error_data, dict) and 'detail' in error_data:
+            view = context.get('view')
+
+            if view.__class__.__name__ == 'ProjectTaskDetailAPIView':
+                message = "Task not found or you do not have permission to access this task."
+
+            elif view.__class__.__name__ == 'ProjectDetailAPIView':
+                message = "Project not found or you do not have permission to access this project."
+
+            elif isinstance(error_data, dict) and 'detail' in error_data:
                 message = str(error_data['detail'])
             else:
                 message = "Requested resource was not found."
@@ -100,7 +108,6 @@ def custom_exception_handler(exc, context):
 
 
 # Invalid API URL Handler
-
 def invalid_api_url(request, invalid_path=None):
 
     return JsonResponse(
@@ -114,7 +121,6 @@ def invalid_api_url(request, invalid_path=None):
 
 
 # Project-level 404 Handler
-
 def custom_404_handler(request, exception):
 
     return JsonResponse(

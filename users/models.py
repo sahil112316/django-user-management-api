@@ -41,7 +41,6 @@ class User(AbstractUser, BaseModel):
     emergency_contact_relationship = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=10, choices=[('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
-    deleted_at = models.DateTimeField(null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     otp = models.CharField(max_length=6, null=True, blank=True, default='')
     is_otp_used = models.BooleanField(default=False)
@@ -67,27 +66,24 @@ class Client(BaseModel):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-
 # Project Model
 class Project(BaseModel):
 
     project_title = models.CharField(max_length=150, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    project_type = models.CharField(max_length=100, null=True, blank=True)
+    project_type_master = models.ForeignKey('ProjectType', on_delete=models.PROTECT, null=True, blank=True, related_name='projects')
     start_date = models.DateField(auto_now_add=True)
     date_of_completion = models.DateField(null=True, blank=True)
-    project_status = models.CharField(max_length=30, choices=[('Pending', 'Pending'), ('In Progress', 'In Progress'), ('Completed', 'Completed'), ('Cancelled', 'Cancelled')], default='Pending', null=True, blank=True)
+    project_status_master = models.ForeignKey('ProjectStatus', on_delete=models.PROTECT, null=True, blank=True, related_name='projects')
     status = models.CharField(max_length=10, choices=[('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', null=True, blank=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='projects')
     user_client = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='user_client_projects',limit_choices_to={'profile__name': 'Client'})
     assigned_manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_projects')
     is_deleted = models.BooleanField(default=False)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='deleted_projects')
 
     def __str__(self):
         return self.project_title if self.project_title else "Project"
-
+    
 # ProjectAttachment Model
 class ProjectAttachment(models.Model):
 
@@ -98,16 +94,9 @@ class ProjectAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.project}"
-
+    
 # Project Task Model
 class ProjectTask(BaseModel):
-
-    TASK_STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('In Progress', 'In Progress'),
-        ('Completed', 'Completed'),
-        ('Cancelled', 'Cancelled'),
-    ]
 
     task_title = models.CharField(max_length=255)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
@@ -116,7 +105,7 @@ class ProjectTask(BaseModel):
     start_date = models.DateField(auto_now_add=True)
     completion_date = models.DateField(null=True, blank=True)
     deadline_date = models.DateField()
-    task_status = models.CharField(max_length=20, choices=TASK_STATUS_CHOICES, default='Pending')
+    task_status_master = models.ForeignKey('TaskStatus', on_delete=models.PROTECT, null=True, blank=True, related_name='tasks')
 
     class Meta:
         constraints = [
@@ -125,6 +114,32 @@ class ProjectTask(BaseModel):
 
     def __str__(self):
         return self.task_title
+
+# Project Type Model
+class ProjectType(BaseModel):
+    name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+# Project Status Model
+class ProjectStatus(BaseModel):
+    name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+# Task Status Model
+class TaskStatus(BaseModel):
+    name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
 
 
 # Task Comment Model

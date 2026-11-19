@@ -97,12 +97,12 @@ urlpatterns = [
 
     # Project Task APIs
     path(
-        'project-tasks/',
+        'projects/tasks/',
         ProjectTaskListCreateAPIView.as_view(),
         name='project-task-list-create'
     ),
     path(
-        'project-tasks/<int:pk>/',
+        'projects/tasks/<int:pk>/',
         ProjectTaskDetailAPIView.as_view(),
         name='project-task-detail'
     ),
@@ -126,7 +126,6 @@ urlpatterns = [
         name='profile-detail'
     ),
 
-    # Old Client Restore APIs
     path(
         'clients/restore/',
         ClientRestoreAPIView.as_view(),
@@ -138,7 +137,6 @@ urlpatterns = [
         name='client-restore-detail'
     ),
 
-    # Old Client CRUD APIs
     path(
         'clients/',
         ClientListCreateAPIView.as_view(),
@@ -150,7 +148,6 @@ urlpatterns = [
         name='client-detail'
     ),
 
-    # Handle Invalid API URLs
     path(
         '<path:invalid_path>',
         invalid_api_url,

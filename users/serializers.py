@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
     User, Client, Project, Profile, ProjectAttachment,
-    ProjectTask, TaskComment
+    ProjectTask, TaskComment, ProjectType, ProjectStatus, TaskStatus,
 )
 
 #1. Project Manager Assignment Field
@@ -77,8 +77,7 @@ class FlexibleManagerField(serializers.RelatedField):
 
         return user
 
-
-# 2.  User Login Serializer
+# 2. User Login Serializer
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(
         required=True,
@@ -124,10 +123,11 @@ class LoginSerializer(serializers.Serializer):
         refresh = RefreshToken.for_user(user)
         return {
             'message': 'Login successful.',
+            'user_id': user.id,
+            'email': user.email,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-
 
 # 3. Send OTP Serializer
 class SendOTPSerializer(serializers.Serializer):
@@ -185,7 +185,6 @@ class SendOTPSerializer(serializers.Serializer):
 
         data['user'] = user
         return data
-
 
 # 4. Verify OTP Serializer
 class VerifyOTPSerializer(serializers.Serializer):
@@ -297,9 +296,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         attrs['user'] = user
         return attrs
 
-
-
-
 #6. User List Query Parameter Validation
 class UserListQuerySerializer(serializers.Serializer):
 
@@ -363,7 +359,6 @@ class UserListQuerySerializer(serializers.Serializer):
 
         return value
 
-
 #7. User Audit Serializer
 class UserAuditSerializer(serializers.ModelSerializer):
 
@@ -401,7 +396,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email',
-            'profiles', 'is_client',
+            'profiles',
             'date_of_birth', 'gender', 'nationality', 'country',
             'image', 'blood_group', 'phone', 'permanent_address',
             'current_address', 'emergency_contact_name',
@@ -412,7 +407,6 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = [
-            'is_client',
             'created_by', 'modified_by', 'created_at', 'updated_at'
         ]
 
@@ -429,7 +423,6 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active': profile.status == 'Active',
             'is_default': profile.is_default
         }
-
 #9. User Create Serializer
 class UserCreateSerializer(serializers.ModelSerializer):
 
@@ -456,7 +449,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'first_name', 'last_name', 'email', 'username',
-            'profiles', 'profiles_details', 'is_client',
+            'profiles', 'profiles_details',
             'date_of_birth', 'gender', 'nationality', 'country',
             'image', 'blood_group', 'phone', 'permanent_address',
             'current_address', 'emergency_contact_name',
@@ -467,9 +460,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = [
-            'is_client',
             'created_by', 'modified_by', 'created_at', 'updated_at'
         ]
+
+    def validate_request_data(self, data):
+
+        if not isinstance(data, dict):
+            raise serializers.ValidationError(
+                'Invalid request data. Expected a JSON object.'
+            )
+
+        return data
 
     def validate_email(self, value):
 
@@ -533,7 +534,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
             pass
 
         return user
-
 #10. User Update Serializer
 class UserUpdateSerializer(serializers.ModelSerializer):
 
@@ -570,15 +570,23 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'image', 'blood_group', 'phone', 'permanent_address',
             'current_address', 'emergency_contact_name',
             'emergency_contact_number', 'emergency_contact_relationship',
-            'status', 'is_client',
+            'status',
             'created_by', 'modified_by',
             'created_at', 'updated_at'
         ]
 
         read_only_fields = [
-            'is_client',
             'created_by', 'modified_by', 'created_at', 'updated_at'
         ]
+
+    def validate_request_data(self, data):
+
+        if not isinstance(data, dict):
+            raise serializers.ValidationError(
+                'Invalid request data. Expected a JSON object.'
+            )
+
+        return data
 
     def validate_email(self, value):
 
@@ -609,7 +617,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 }
 
         return super().update(instance, validated_data)
-
 #11. Client List Query Parameter Validation
 class ClientListQuerySerializer(serializers.Serializer):
 
@@ -668,16 +675,35 @@ class ClientListQuerySerializer(serializers.Serializer):
         return value
 
 
+
 #12. Client Serializer
 class ClientSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Client
         fields = '__all__'
 
+    def to_internal_value(self, data):
 
+        if not hasattr(data, 'keys'):
+            raise serializers.ValidationError({
+                'detail': 'Request data must be a JSON object.'
+            })
 
-# New Client Serializer using User model
+        valid_fields = set(self.fields.keys())
+        invalid_fields = set(data.keys()) - valid_fields
 
+        if invalid_fields:
+            errors = {
+                field: ['This is not a valid field. Please provide a valid field name.']
+                for field in invalid_fields
+            }
+
+            raise serializers.ValidationError(errors)
+
+        return super().to_internal_value(data)
+
+#13 New Client Serializer using User model
 
 class UserClientSerializer(serializers.ModelSerializer):
 
@@ -740,6 +766,12 @@ class UserClientSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance is not None:
+            self.fields['email_id'].required = False
+
     def validate_email_id(self, value):
         queryset = User.objects.filter(email__iexact=value)
 
@@ -767,8 +799,7 @@ class UserClientSerializer(serializers.ModelSerializer):
 
         return client
 
-
-#13. Project Client Details Serializer
+#14. Project Client Details Serializer
 class ProjectClientSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         source='email_id',
@@ -779,12 +810,13 @@ class ProjectClientSerializer(serializers.ModelSerializer):
         model = Client
         fields = ['id', 'first_name', 'last_name', 'email']
 
-# 14. Client Details Field
+# 15. Client Details Field
 class ClientDetailsField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return ProjectClientSerializer(value).data
-# 15. User Client Details Serializer
+    
+# 16. User Client Details Serializer
 class UserClientDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -792,7 +824,7 @@ class UserClientDetailsSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'email']
 
 
-# 16. User Client Details Field
+# 17. User Client Details Field
 class UserClientDetailsField(serializers.PrimaryKeyRelatedField):
 
     def use_pk_only_optimization(self):
@@ -801,9 +833,7 @@ class UserClientDetailsField(serializers.PrimaryKeyRelatedField):
     def to_representation(self, value):
         return UserClientDetailsSerializer(value).data
 
-
-
-#15. Project User Details Serializer
+#18. Project User Details Serializer
 class ProjectUserSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source='profile.name', read_only=True)
 
@@ -819,7 +849,7 @@ class ProjectUserSerializer(serializers.ModelSerializer):
         ]
 
 
-# 16. Project Attachment Serializer
+# 19. Project Attachment Serializer
 class ProjectAttachmentSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
 
@@ -845,7 +875,7 @@ class ProjectAttachmentSerializer(serializers.ModelSerializer):
 
         return None
 
-# 17. Send Project Creation Email Notification to Client
+# 20. Send Project Creation Email Notification to Client
 def send_client_project_email(project):
 
     client = project.client or project.user_client
@@ -876,7 +906,7 @@ def send_client_project_email(project):
         f"Hello {client.first_name or 'Client'},\n\n"
         f"A new project has been created for you.\n\n"
         f"Project Title: {project.project_title}\n"
-        f"Project Status: {project.project_status}\n"
+        f"Project Status: {project.project_status_master.name if project.project_status_master else 'Not provided'}\n"
         f"Description: {project.description or 'Not provided'}\n\n"
         f"Assigned Manager: {manager_name}\n"
         f"Manager Email: {manager_email}\n\n"
@@ -891,8 +921,7 @@ def send_client_project_email(project):
         fail_silently=True
     )
 
-
-# 18. Send Project Assignment Email Notification to Manager
+# 21. Send Project Assignment Email Notification to Manager
 def send_manager_project_email(project):
 
     manager = project.assigned_manager
@@ -922,7 +951,7 @@ def send_manager_project_email(project):
         f"Hello {manager.first_name or manager.username},\n\n"
         f"A new project has been assigned to you.\n\n"
         f"Project Title: {project.project_title}\n"
-        f"Project Status: {project.project_status}\n"
+        f"Project Status: {project.project_status_master.name if project.project_status_master else 'Not provided'}\n"
         f"Description: {project.description or 'Not provided'}\n\n"
         f"Client Name: {client_name}\n"
         f"Client Email: {client_email}\n\n"
@@ -937,7 +966,7 @@ def send_manager_project_email(project):
         fail_silently=True
     )
 
-#19. Project List Query Parameter Validation
+#22. Project List Query Parameter Validation
 class ProjectListQuerySerializer(serializers.Serializer):
 
     status = serializers.CharField(
@@ -1074,7 +1103,7 @@ class ProjectListQuerySerializer(serializers.Serializer):
 
         return value
 
-#20. Project Task List Query Parameter Validation
+#23. Project Task List Query Parameter Validation
 class ProjectTaskListQuerySerializer(serializers.Serializer):
 
     project_id = serializers.CharField(
@@ -1105,9 +1134,7 @@ class ProjectTaskListQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid developer_id.')
         return value
 
-
-
-# 21. Project Serializer
+# 24. Project Serializer
 class ProjectSerializer(serializers.ModelSerializer):
 
     client_id = ClientDetailsField(
@@ -1146,11 +1173,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    deleted_by = ProjectUserSerializer(
-        read_only=True,
-        allow_null=True
-    )
-
     title = serializers.CharField(
         source='project_title',
         required=False,
@@ -1161,23 +1183,27 @@ class ProjectSerializer(serializers.ModelSerializer):
         }
     )
 
-    type = serializers.CharField(
-        source='project_type',
+    type = serializers.SlugRelatedField(
+        slug_field='name',
+        source='project_type_master',
+        queryset=ProjectType.objects.filter(is_active=True),
         required=False,
         allow_null=True,
         error_messages={
-            'invalid': 'Project type must be a valid string.',
-            'blank': 'Project type cannot be blank.'
+            'does_not_exist': 'Invalid project type. Please select a valid project type.',
+            'invalid': 'Project type must be a valid string.'
         }
     )
 
-    status = serializers.ChoiceField(
-        choices=Project._meta.get_field('project_status').choices,
-        source='project_status',
+    status = serializers.SlugRelatedField(
+        slug_field='name',
+        source='project_status_master',
+        queryset=ProjectStatus.objects.filter(is_active=True),
         required=False,
         allow_null=True,
         error_messages={
-            'invalid_choice': 'Invalid project status. Please select a valid status.'
+            'does_not_exist': 'Invalid project status. Please select a valid status.',
+            'invalid': 'Project status must be a valid string.'
         }
     )
 
@@ -1218,15 +1244,14 @@ class ProjectSerializer(serializers.ModelSerializer):
             'created_by', 'updated_by',
             'title', 'type', 'date_of_completion',
             'status', 'created_at', 'updated_at',
-            'is_deleted', 'deleted_at', 'deleted_by',
-            'attachments', 'new_attachments',
+            'is_deleted','attachments', 'new_attachments',
             'delete_attachment_ids', 'description',
         ]
 
         read_only_fields = [
             'id', 'created_by', 'updated_by',
             'created_at', 'updated_at',
-            'is_deleted', 'deleted_at', 'deleted_by'
+            'is_deleted'
         ]
 
     def to_representation(self, instance):
@@ -1402,7 +1427,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             attachment.delete()
 
         return instance
-#22. Manager Details Serializer
+    
+#25. Manager Details Serializer
 class ManagerSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
 
@@ -1427,14 +1453,13 @@ class ManagerSerializer(serializers.ModelSerializer):
 
         return None
 
-
-#.23 Task User Related Field
+#.26 Task User Related Field
 class TaskUserRelatedField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return ManagerSerializer(value).data
 
-#24. User Profile Details Serializer
+#27. User Profile Details Serializer
 class ProfileSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source='name', read_only=True)
 
@@ -1442,10 +1467,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['id', 'role', 'is_default']
 
-
-
-
-#25. Profile Create, Update and Validation Serializer
+#28. Profile Create, Update and Validation Serializer
 class ProfileCRUDSerializer(serializers.ModelSerializer):
 
     role = serializers.CharField(
@@ -1540,7 +1562,7 @@ class ProfileCRUDSerializer(serializers.ModelSerializer):
 
         return instance
 
-# 26.Profile Role Query Parameter Validation
+# 29.Profile Role Query Parameter Validation
 class ProfileRoleQuerySerializer(serializers.Serializer):
 
     role = serializers.CharField(
@@ -1567,7 +1589,7 @@ class ProfileRoleQuerySerializer(serializers.Serializer):
 
         return data
 
-#27. Profile Detail Action Validation
+#30. Profile Detail Action Validation
 class ProfileDetailActionSerializer(serializers.Serializer):
 
     pk = serializers.CharField(
@@ -1616,7 +1638,7 @@ class ProfileDetailActionSerializer(serializers.Serializer):
 
         return attrs
 
-# 28.Profile Users Query Parameter Validation
+# 31.Profile Users Query Parameter Validation
 class ProfileUsersQuerySerializer(serializers.Serializer):
 
     role = serializers.CharField(
@@ -1640,9 +1662,7 @@ class ProfileUsersQuerySerializer(serializers.Serializer):
                 'Profile does not exist.'
             )
 
-
-
-# 29. Project Task Serializer
+# 32. Project Task Serializer
 
 class ProjectTaskSerializer(serializers.ModelSerializer):
 
@@ -1715,11 +1735,16 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
         }
     )
 
-    task_status = serializers.ChoiceField(
-        choices=ProjectTask._meta.get_field('task_status').choices,
+    task_status = serializers.SlugRelatedField(
+        slug_field='name',
+        source='task_status_master',
+        queryset=TaskStatus.objects.filter(is_active=True),
+        required=True,
+        allow_null=False,
         error_messages={
             'required': 'Please provide task status.',
-            'invalid_choice': 'Please provide a valid task status.',
+            'does_not_exist': 'Please provide a valid task status.',
+            'invalid': 'Task status must be a valid string.',
             'null': 'Task status cannot be null.'
         }
     )
@@ -1808,7 +1833,7 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
 
         return team_leaders
 
-# 30. Task Comment Serializer
+# 33. Task Comment Serializer
 class TaskCommentSerializer(serializers.ModelSerializer):
 
     task_id = serializers.PrimaryKeyRelatedField(
@@ -1858,7 +1883,7 @@ class TaskCommentSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
 
-#31. Restore IDs Validation Serializer
+#34. Restore IDs Validation Serializer
 class RestoreIDsSerializer(serializers.Serializer):
 
     ids = serializers.JSONField(required=False)
@@ -1917,7 +1942,7 @@ class RestoreIDsSerializer(serializers.Serializer):
 
         return attrs
 
-#32.Task Comment List Query Parameter Validation
+#35.Task Comment List Query Parameter Validation
 class TaskCommentListQuerySerializer(serializers.Serializer):
 
     task_id = serializers.CharField(
