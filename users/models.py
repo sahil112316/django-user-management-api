@@ -66,23 +66,81 @@ class Client(BaseModel):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-# Project Model
+
+#  ProjectModel
 class Project(BaseModel):
 
     project_title = models.CharField(max_length=150, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    project_type_master = models.ForeignKey('ProjectType', on_delete=models.PROTECT, null=True, blank=True, related_name='projects')
+
+    project_type_master = models.ForeignKey(
+        'ProjectType',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='projects'
+    )
+
     start_date = models.DateField(auto_now_add=True)
     date_of_completion = models.DateField(null=True, blank=True)
-    project_status_master = models.ForeignKey('ProjectStatus', on_delete=models.PROTECT, null=True, blank=True, related_name='projects')
-    status = models.CharField(max_length=10, choices=[('Active', 'Active'), ('Inactive', 'Inactive')], default='Active', null=True, blank=True)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='projects')
-    user_client = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='user_client_projects',limit_choices_to={'profile__name': 'Client'})
-    assigned_manager = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_projects')
+
+    project_status_master = models.ForeignKey(
+        'ProjectStatus',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='projects'
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=[
+            ('Active', 'Active'),
+            ('Inactive', 'Inactive')
+        ],
+        default='Active',
+        null=True,
+        blank=True
+    )
+
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='projects'
+    )
+
+    user_client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='user_client_projects',
+        limit_choices_to={'profile__name': 'Client'}
+    )
+
+    assigned_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managed_projects',
+        limit_choices_to={'profile__name': 'Manager'}
+    )
+
+    team_leaders = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='assigned_team_leader_projects',
+        limit_choices_to={'profile__name': 'Team Leader'}
+    )
+
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return self.project_title if self.project_title else "Project"
+
     
 # ProjectAttachment Model
 class ProjectAttachment(models.Model):
@@ -94,8 +152,9 @@ class ProjectAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.project}"
-    
-# Project Task Model
+
+# ProjectTask Model
+
 class ProjectTask(BaseModel):
 
     task_title = models.CharField(max_length=255)
@@ -114,7 +173,7 @@ class ProjectTask(BaseModel):
 
     def __str__(self):
         return self.task_title
-
+    
 # Project Type Model
 class ProjectType(BaseModel):
     name = models.CharField(max_length=100, unique=True)

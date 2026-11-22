@@ -77,6 +77,7 @@ class FlexibleManagerField(serializers.RelatedField):
 
         return user
 
+
 # 2. User Login Serializer
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -121,10 +122,18 @@ class LoginSerializer(serializers.Serializer):
             )
 
         refresh = RefreshToken.for_user(user)
+
+        profile = user.profile
+
         return {
             'message': 'Login successful.',
             'user_id': user.id,
             'email': user.email,
+            'role': profile.name if profile else None,
+            'profile': {
+                'id': profile.id,
+                'name': profile.name
+            } if profile else None,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
@@ -296,7 +305,8 @@ class ResetPasswordSerializer(serializers.Serializer):
         attrs['user'] = user
         return attrs
 
-#6. User List Query Parameter Validation
+
+# 6. User List Query Parameter Validation
 class UserListQuerySerializer(serializers.Serializer):
 
     status = serializers.CharField(
@@ -324,6 +334,25 @@ class UserListQuerySerializer(serializers.Serializer):
         error_messages={
             'invalid': 'Invalid date_to.',
             'null': 'date_to cannot be null.',
+        }
+    )
+
+    profile = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        error_messages={
+            'invalid': 'Profile must be a valid string.',
+            'null': 'Profile cannot be null.',
+        }
+    )
+
+    profile_id = serializers.IntegerField(
+        required=False,
+        min_value=1,
+        error_messages={
+            'invalid': 'Profile ID must be a valid integer.',
+            'null': 'Profile ID cannot be null.',
+            'min_value': 'Profile ID must be greater than 0.',
         }
     )
 
@@ -359,6 +388,32 @@ class UserListQuerySerializer(serializers.Serializer):
 
         return value
 
+    def validate(self, data):
+
+        profile = data.get('profile', '').strip()
+        profile_id = data.get('profile_id')
+
+        if profile and profile_id is not None:
+            raise serializers.ValidationError(
+                'Use either profile or profile_id, not both.'
+            )
+
+        if profile:
+            if not Profile.objects.filter(
+                name__iexact=profile
+            ).exists():
+                raise serializers.ValidationError(
+                    'Profile does not exist.'
+                )
+
+        if profile_id is not None:
+            if not Profile.objects.filter(id=profile_id).exists():
+                raise serializers.ValidationError(
+                    'Profile does not exist.'
+                )
+
+        return data
+
 #7. User Audit Serializer
 class UserAuditSerializer(serializers.ModelSerializer):
 
@@ -386,6 +441,7 @@ class UserAuditSerializer(serializers.ModelSerializer):
 
 
 #8. User Details Serializer
+
 class UserSerializer(serializers.ModelSerializer):
 
     profiles = serializers.SerializerMethodField()
@@ -410,6 +466,16 @@ class UserSerializer(serializers.ModelSerializer):
             'created_by', 'modified_by', 'created_at', 'updated_at'
         ]
 
+    def to_representation(self, instance):
+
+        data = super().to_representation(instance)
+
+        # Hide modified_by until user is updated
+        if instance.modified_by_id is None:
+            data.pop('modified_by', None)
+
+        return data
+
     def get_profiles(self, obj):
 
         profile = obj.profile
@@ -419,11 +485,13 @@ class UserSerializer(serializers.ModelSerializer):
 
         return {
             'id': profile.id,
-            'role': profile.name,
+            'role': profile.name.lower(),
             'is_active': profile.status == 'Active',
             'is_default': profile.is_default
         }
+
 #9. User Create Serializer
+
 class UserCreateSerializer(serializers.ModelSerializer):
 
     profiles = serializers.PrimaryKeyRelatedField(
@@ -462,6 +530,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'created_by', 'modified_by', 'created_at', 'updated_at'
         ]
+
+    def to_representation(self, instance):
+
+        data = super().to_representation(instance)
+
+        # Hide modified_by until user is updated
+        if instance.modified_by_id is None:
+            data.pop('modified_by', None)
+
+        return data
 
     def validate_request_data(self, data):
 
@@ -534,7 +612,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
             pass
 
         return user
+
 #10. User Update Serializer
+
 class UserUpdateSerializer(serializers.ModelSerializer):
 
     profiles = serializers.PrimaryKeyRelatedField(
@@ -588,6 +668,41 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate(self, attrs):
+
+        request = self.context.get('request')
+
+        if request and self.instance:
+            profile = getattr(request.user, 'profile', None)
+            role = profile.name if profile else ''
+
+            is_admin = role in ['Admin', 'Super Admin']
+            is_own_data = request.user.pk == self.instance.pk
+
+            if is_own_data and not is_admin:
+
+                restricted_fields = {
+                    'email': 'Email',
+                    'profiles': 'Profile',
+                    'status': 'Status',
+                    'date_of_birth': 'Date of birth',
+                    'gender': 'Gender'
+                }
+
+                errors = {}
+
+                for field, field_name in restricted_fields.items():
+                    if field in self.initial_data:
+                        errors[field] = (
+                            f'You cannot change your own {field_name}. '
+                            'Only Admin and Super Admin can change this field.'
+                        )
+
+                if errors:
+                    raise serializers.ValidationError(errors)
+
+        return attrs
+
     def validate_email(self, value):
 
         if value != value.lower():
@@ -617,6 +732,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 }
 
         return super().update(instance, validated_data)
+
 #11. Client List Query Parameter Validation
 class ClientListQuerySerializer(serializers.Serializer):
 
@@ -738,6 +854,8 @@ class UserClientSerializer(serializers.ModelSerializer):
         }
     )
 
+    profiles = serializers.SerializerMethodField()
+
     created_by = UserAuditSerializer(read_only=True)
     modified_by = UserAuditSerializer(read_only=True)
 
@@ -752,6 +870,7 @@ class UserClientSerializer(serializers.ModelSerializer):
             'contact_no',
             'email_id',
             'status',
+            'profiles',
             'created_by',
             'modified_by',
             'created_at',
@@ -772,6 +891,52 @@ class UserClientSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             self.fields['email_id'].required = False
 
+    def get_profiles(self, obj):
+        profile = getattr(obj, 'profile', None)
+
+        if not profile:
+            return None
+
+        return {
+            'id': profile.id,
+            'role': profile.name.lower(),
+            'is_active': profile.status == 'Active',
+            'is_default': profile.is_default
+        }
+
+    def validate(self, attrs):
+
+        request = self.context.get('request')
+
+        if request and self.instance:
+            profile = getattr(request.user, 'profile', None)
+            role = profile.name if profile else ''
+
+            is_admin = role in ['Admin', 'Super Admin']
+            is_own_data = request.user.pk == self.instance.pk
+
+            if is_own_data and not is_admin:
+
+                restricted_fields = {
+                    'email_id': 'Email',
+                    'status': 'Status',
+                    'profiles': 'Profile'
+                }
+
+                errors = {}
+
+                for field, field_name in restricted_fields.items():
+                    if field in self.initial_data:
+                        errors[field] = (
+                            f'You cannot change your own {field_name}. '
+                            'Only Admin and Super Admin can change this field.'
+                        )
+
+                if errors:
+                    raise serializers.ValidationError(errors)
+
+        return attrs
+
     def validate_email_id(self, value):
         queryset = User.objects.filter(email__iexact=value)
 
@@ -784,20 +949,6 @@ class UserClientSerializer(serializers.ModelSerializer):
             )
 
         return value
-
-    def create(self, validated_data):
-        validated_data['is_client'] = True
-        validated_data['profile'] = None
-        validated_data['profiles'] = None
-        validated_data['status'] = (
-            validated_data.get('status') or 'Active'
-        )
-
-        client = User(**validated_data)
-        client.set_unusable_password()
-        client.save()
-
-        return client
 
 #14. Project Client Details Serializer
 class ProjectClientSerializer(serializers.ModelSerializer):
@@ -1135,6 +1286,10 @@ class ProjectTaskListQuerySerializer(serializers.Serializer):
         return value
 
 # 24. Project Serializer
+
+
+
+
 class ProjectSerializer(serializers.ModelSerializer):
 
     client_id = ClientDetailsField(
@@ -1164,6 +1319,19 @@ class ProjectSerializer(serializers.ModelSerializer):
     assigned_manager = FlexibleManagerField(
         required=False,
         allow_null=True
+    )
+
+    team_leaders = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.filter(
+            profile__name='Team Leader',
+            status='Active'
+        ),
+        required=False,
+        error_messages={
+            'does_not_exist': 'Team Leader does not exist or is inactive.',
+            'incorrect_type': 'Team Leader ID must be a valid integer.'
+        }
     )
 
     created_by = ProjectUserSerializer(read_only=True)
@@ -1203,7 +1371,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         allow_null=True,
         error_messages={
             'does_not_exist': 'Invalid project status. Please select a valid status.',
-            'invalid': 'Project status must be a valid string.'
+            'invalid': 'Project status must be a valid status.'
         }
     )
 
@@ -1241,10 +1409,11 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             'id', 'client_id', 'user_client_id', 'assigned_manager',
+            'team_leaders',
             'created_by', 'updated_by',
             'title', 'type', 'date_of_completion',
             'status', 'created_at', 'updated_at',
-            'is_deleted','attachments', 'new_attachments',
+            'is_deleted', 'attachments', 'new_attachments',
             'delete_attachment_ids', 'description',
         ]
 
@@ -1263,9 +1432,33 @@ class ProjectSerializer(serializers.ModelSerializer):
         elif instance.user_client_id:
             data.pop('client_id', None)
 
+        # Hide update fields only in creation response
+        if self.context.get('is_create_response'):
+            data.pop('updated_by', None)
+            data.pop('updated_at', None)
+
         return data
 
     def validate(self, attrs):
+
+        # Manager is required only when creating a new project
+        if self.instance is None:
+
+            manager = attrs.get(
+                'assigned_manager',
+                serializers.empty
+            )
+
+            if manager is serializers.empty or manager is None:
+                raise serializers.ValidationError({
+                    'assigned_manager': 'Please assign a Manager to this project.'
+                })
+
+            # Team Leaders must be assigned after project creation
+            if 'team_leaders' in self.initial_data:
+                raise serializers.ValidationError({
+                    'team_leaders': 'Team Leaders can only be assigned after project creation.'
+                })
 
         client = attrs.get('client', serializers.empty)
         user_client = attrs.get('user_client', serializers.empty)
@@ -1408,7 +1601,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         )
 
         # Add new attachments
-
         for file in files:
             ProjectAttachment.objects.create(
                 project=instance,
@@ -1417,7 +1609,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             )
 
         # Permanently delete attachments from database and disk
-
         for attachment in instance.attachments.filter(
             id__in=delete_ids
         ):
@@ -1427,7 +1618,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             attachment.delete()
 
         return instance
-    
+
+
 #25. Manager Details Serializer
 class ManagerSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
@@ -1664,12 +1856,15 @@ class ProfileUsersQuerySerializer(serializers.Serializer):
 
 # 32. Project Task Serializer
 
+
 class ProjectTaskSerializer(serializers.ModelSerializer):
 
     project_id = serializers.PrimaryKeyRelatedField(
         source='project',
         queryset=Project.objects.all(),
         write_only=True,
+        required=True,
+        allow_null=False,
         error_messages={
             'required': 'Please provide a project ID.',
             'does_not_exist': 'Project does not exist.',
@@ -1813,7 +2008,6 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
 
         return developers
 
-
     def validate_team_leader(self, team_leaders):
 
         for leader in team_leaders:
@@ -1833,7 +2027,49 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
 
         return team_leaders
 
+    def validate(self, attrs):
+
+        if self.instance is None:
+
+            request = self.context.get('request')
+
+            if (
+                request
+                and request.user.profile
+                and request.user.profile.name == 'Team Leader'
+            ):
+                developers = attrs.get('developers', [])
+
+                if not developers:
+                    raise serializers.ValidationError({
+                        'developers': 'Please assign at least one Developer to the task.'
+                    })
+
+        return attrs
+
+    def to_representation(self, instance):
+
+        data = super().to_representation(instance)
+
+        # Hide update fields only in creation response
+        if self.context.get('is_create_response'):
+            data['modified_by'] = None
+            data.pop('updated_at', None)
+
+            request = self.context.get('request')
+
+            if request:
+                if 'developers' not in request.data:
+                    data.pop('developers', None)
+
+                if 'team_leader' not in request.data:
+                    data.pop('team_leader', None)
+
+        return data
+
+
 # 33. Task Comment Serializer
+
 class TaskCommentSerializer(serializers.ModelSerializer):
 
     task_id = serializers.PrimaryKeyRelatedField(
@@ -1882,6 +2118,21 @@ class TaskCommentSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
+
+    def validate(self, attrs):
+
+        request = self.context.get('request')
+
+        if request:
+            profile = getattr(request.user, 'profile', None)
+            role = profile.name if profile else ''
+
+            if role == 'Client':
+                raise serializers.ValidationError({
+                    'comment': 'Clients do not have permission to add comments.'
+                })
+
+        return attrs
 
 #34. Restore IDs Validation Serializer
 class RestoreIDsSerializer(serializers.Serializer):

@@ -57,7 +57,6 @@ class ClientPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-
 # 2. User List, Search, Filters, Pagination and Create API
 
 class UserListCreateAPIView(APIView):
@@ -66,23 +65,16 @@ class UserListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserCreateSerializer
 
-    # Check Super Admin / Admin Permission
     def has_user_management_permission(self, request):
         profile = getattr(request.user, 'profile', None)
         role = profile.name if profile else None
         return role in ['Super Admin', 'Admin']
 
-    # User List, Search, Filters and Pagination
     def get(self, request):
 
-        # Check Super Admin / Admin Permission
-        if not self.has_user_management_permission(request):
-            return Response(
-                {'error': 'Only Super Admin and Admin can access users.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
 
-        # Status and Date Query Validation
+        is_admin = self.has_user_management_permission(request)
+
         query_serializer = UserListQuerySerializer(
             data=request.query_params
         )
@@ -100,22 +92,57 @@ class UserListCreateAPIView(APIView):
         date_from = validated_filters.get('date_from', '')
         date_to = validated_filters.get('date_to', '')
 
-        # Profile Filter
-        profile = request.query_params.get('profile', '').strip()
+        # Profile Filter Through Name or ID
+        profile = validated_filters.get('profile', '').strip()
+        profile_id = validated_filters.get('profile_id')
 
-        # Separate Users and Clients Through Profile
-        if profile.lower() == 'client':
-            base_users = User.objects.filter(
-                profile__name__iexact='client'
-            )
-            is_client = True
+        if is_admin:
+
+            if profile:
+                is_client = profile.lower() == 'client'
+
+                base_users = User.objects.filter(
+                    profile__name__iexact=profile
+                )
+
+            elif profile_id is not None:
+                is_client = Profile.objects.filter(
+                    id=profile_id,
+                    name__iexact='client'
+                ).exists()
+
+                base_users = User.objects.filter(
+                    profile_id=profile_id
+                )
+
+            else:
+                base_users = User.objects.exclude(
+                    profile__name__iexact='client'
+                )
+                is_client = False
+
         else:
-            base_users = User.objects.exclude(
-                profile__name__iexact='client'
+            # Normal User / Client Can Access Only Own Data
+            base_users = User.objects.filter(
+                id=request.user.id
             )
-            is_client = False
 
-        # Overall User / Client Counts
+            user_profile = getattr(request.user, 'profile', None)
+
+            is_client = (
+                user_profile and user_profile.name.lower() == 'client'
+            )
+
+            if profile:
+                base_users = base_users.filter(
+                    profile__name__iexact=profile
+                )
+
+            if profile_id is not None:
+                base_users = base_users.filter(
+                    profile_id=profile_id
+                )
+
         total_count = base_users.count()
 
         active_count = base_users.filter(
@@ -140,12 +167,6 @@ class UserListCreateAPIView(APIView):
                 Q(email__icontains=search) |
                 Q(profile__name__icontains=search) |
                 Q(phone__icontains=search)
-            )
-
-        # Profile Filter
-        if profile and profile.lower() != 'client':
-            users = users.filter(
-                profile__name__iexact=profile
             )
 
         # Gender Filter
@@ -181,6 +202,32 @@ class UserListCreateAPIView(APIView):
         if date_to:
             users = users.filter(
                 date_of_birth__lte=parse_date(date_to)
+            )
+
+        # Check Empty Filter Results
+        filter_params = [
+            'status',
+            'date_from',
+            'date_to',
+            'profile',
+            'profile_id',
+            'search',
+            'gender',
+            'blood_group',
+            'nationality'
+        ]
+
+        has_filters = any(
+            request.query_params.get(param, '').strip()
+            for param in filter_params
+        )
+
+        if has_filters and not users.exists():
+            return Response(
+                {
+                    'message': 'No users found matching the applied filters.'
+                },
+                status=status.HTTP_200_OK
             )
 
         # Pagination
@@ -243,9 +290,14 @@ class UserListCreateAPIView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
+        profile = serializer.validated_data.get('profile')
+        is_client = (
+            profile and profile.name.lower() == 'client'
+        )
+
         user = serializer.save(
             created_by=request.user,
-            modified_by=request.user
+            modified_by=None
         )
 
         # Return Same User Format for User and Client
@@ -254,8 +306,13 @@ class UserListCreateAPIView(APIView):
             context={'request': request}
         )
 
+        response_data = response_serializer.data.copy()
+
+        # Hide updated_at from Creation Response
+        response_data.pop('updated_at', None)
+
         return Response(
-            response_serializer.data,
+            response_data,
             status=status.HTTP_201_CREATED
         )
 
@@ -287,7 +344,7 @@ class UserDetailAPIView(APIView):
             and request.user.pk != pk
         ):
             return Response(
-                {'error': 'You can only access your own data.'},
+                {'error': 'You can only access your own data. Admin and Super Admin have permission to access all users data.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -928,23 +985,30 @@ class ProjectListCreateAPIView(APIView):
                 assigned_manager=user
             )
 
-        elif role == 'Developer':
-            projects = projects.filter(
-                tasks__developers=user
-            ).distinct()
-
         elif role == 'Team Leader':
             projects = projects.filter(
-                tasks__team_leader=user
+                team_leaders=user
             ).distinct()
 
-        elif role == 'Client':
-            projects = projects.filter(
-                user_client=user
-            )
+            if not projects.exists():
+                return Response(
+                    {
+                        'message': 'No projects are assigned to you.',
+                        'count': 0,
+                        'results': []
+                    },
+                    status=status.HTTP_200_OK
+                )
 
         else:
-            projects = projects.none()
+            return Response(
+                {
+                    'message': 'No projects are assigned to you. Projects are assigned only to Managers.',
+                    'count': 0,
+                    'results': []
+                },
+                status=status.HTTP_200_OK
+            )
 
         # 2. Search Filter
         search = request.query_params.get('search', '').strip()
@@ -1126,7 +1190,7 @@ class ProjectListCreateAPIView(APIView):
                 created_at__date__lte=parse_date(created_to)
             )
 
-        # 15. Pagination
+
         paginator = ClientPagination()
 
         paginated_projects = paginator.paginate_queryset(
@@ -1142,8 +1206,20 @@ class ProjectListCreateAPIView(APIView):
 
         return paginator.get_paginated_response(serializer.data)
 
-    # Create Project
+    
     def post(self, request):
+
+    
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role not in ['Super Admin', 'Admin']:
+            return Response(
+                {
+                    'error': 'Only Admin and Super Admin have permission to create a project.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ProjectSerializer(
             data=request.data,
@@ -1152,16 +1228,22 @@ class ProjectListCreateAPIView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
-        user = request.user if request.user.is_authenticated else None
-
-        serializer.save(
+        project = serializer.save(
             created_by=user,
-            modified_by=user,
+            modified_by=None,
             status='Active'
         )
 
+        response_serializer = ProjectSerializer(
+            project,
+            context={
+                'request': request,
+                'is_create_response': True
+            }
+        )
+
         return Response(
-            serializer.data,
+            response_serializer.data,
             status=status.HTTP_201_CREATED
         )
 
@@ -1196,10 +1278,10 @@ class ProjectDetailAPIView(APIView):
 
         elif role == 'Team Leader':
             projects = projects.filter(
-                tasks__team_leader=user
+                team_leaders=user
             ).distinct()
 
-        elif role == 'Client':
+        elif role == 'Client' or user.is_client:
             projects = projects.filter(
                 user_client=user
             )
@@ -1223,6 +1305,44 @@ class ProjectDetailAPIView(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk):
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role == 'Manager':
+
+            if 'team_leaders' not in request.data or set(request.data.keys()) != {'team_leaders'}:
+                return Response(
+                    {
+                        'error': 'Managers can only assign Team Leaders to their own projects.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            project = get_object_or_404(
+                Project.objects.filter(assigned_manager=user),
+                pk=pk
+            )
+
+            serializer = ProjectSerializer(
+                project,
+                data=request.data,
+                partial=True,
+                context={'request': request}
+            )
+
+            serializer.is_valid(raise_exception=True)
+            serializer.save(modified_by=user)
+
+            return Response(serializer.data)
+
+        if role not in ['Super Admin', 'Admin']:
+            return Response(
+                {
+                    'error': 'Only Admin and Super Admin can update or delete a project. You do not have permission to perform this action.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         if request.data.get('action') == 'delete':
             project = get_object_or_404(
@@ -1270,6 +1390,45 @@ class ProjectDetailAPIView(APIView):
         return Response(serializer.data)
 
     def patch(self, request, pk):
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role == 'Manager':
+
+            if 'team_leaders' not in request.data or set(request.data.keys()) != {'team_leaders'}:
+                return Response(
+                    {
+                        'error': 'Managers can only assign Team Leaders to their own projects.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            project = get_object_or_404(
+                Project.objects.filter(assigned_manager=user),
+                pk=pk
+            )
+
+            serializer = ProjectSerializer(
+                project,
+                data=request.data,
+                partial=True,
+                context={'request': request}
+            )
+
+            serializer.is_valid(raise_exception=True)
+            serializer.save(modified_by=user)
+
+            return Response(serializer.data)
+
+        if role not in ['Super Admin', 'Admin']:
+            return Response(
+                {
+                    'error': 'Only Admin and Super Admin can update a project. You do not have permission to perform this action.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         project = get_object_or_404(
             self.get_user_projects(request),
             pk=pk
@@ -1288,15 +1447,29 @@ class ProjectDetailAPIView(APIView):
 
         serializer.save(modified_by=user)
 
-        return Response(serializer.data)    
+        return Response(serializer.data)
+
 # 14. Profile List and Create API
 
 class ProfileListAPIView(APIView):
     renderer_classes = [JSONRenderer]
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def has_profile_management_permission(self, request):
+        profile = getattr(request.user, 'profile', None)
+        role = profile.name if profile else ''
+        return role in ['Admin', 'Super Admin']
 
     def get(self, request):
+
+        if not self.has_profile_management_permission(request):
+            return Response(
+                {
+                    'error': 'Only Admin and Super Admin have permission to access profiles.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         query_serializer = ProfileRoleQuerySerializer(
             data=request.query_params
@@ -1345,6 +1518,14 @@ class ProfileListAPIView(APIView):
 
     def post(self, request):
 
+        if not self.has_profile_management_permission(request):
+            return Response(
+                {
+                    'error': 'Only Admin and Super Admin have permission to create a profile.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = ProfileCRUDSerializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
@@ -1355,7 +1536,7 @@ class ProfileListAPIView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
-
+    
 #15. Profile Retrieve, Update, Partial Update and Permanent Delete API
 
 class ProfileDetailAPIView(APIView):
@@ -1527,7 +1708,6 @@ class UserRestoreAPIView(APIView):
 
     def post(self, request, pk=None):
 
-        # Single User Restore
         if pk is not None:
 
             user = User.objects.filter(pk=pk).first()
@@ -1562,7 +1742,6 @@ class UserRestoreAPIView(APIView):
                 status=status.HTTP_200_OK
             )
 
-        # Bulk User Restore
         query_serializer = RestoreIDsSerializer(data=request.data)
 
         if not query_serializer.is_valid():
@@ -1607,7 +1786,6 @@ class ClientRestoreAPIView(APIView):
 
     def post(self, request, pk=None):
 
-        # Single Client Restore
         if pk is not None:
 
             client = Client.objects.filter(pk=pk).first()
@@ -1636,7 +1814,6 @@ class ClientRestoreAPIView(APIView):
                 status=status.HTTP_200_OK
             )
 
-        # Bulk Client Restore
         query_serializer = RestoreIDsSerializer(data=request.data)
 
         if not query_serializer.is_valid():
@@ -1701,7 +1878,9 @@ class ProjectRestoreAPIView(APIView):
 
         restored_count = projects.update(
             status='Active',
-            is_deleted=False
+            is_deleted=False,
+            deleted_at=None,
+            deleted_by=None
         )
 
         return Response(
@@ -1711,6 +1890,7 @@ class ProjectRestoreAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
 # 20 Project Task List, Search, Filter and Create API
 
 class ProjectTaskListCreateAPIView(APIView):
@@ -1725,10 +1905,10 @@ class ProjectTaskListCreateAPIView(APIView):
         tasks = ProjectTask.objects.select_related(
             'project', 'created_by', 'modified_by'
         ).prefetch_related(
-            'developers'
+            'developers',
+            'team_leader'
         ).order_by('id')
 
-        # User-wise Task Filtering
         user = request.user
         role = user.profile.name if user.profile else ''
 
@@ -1750,15 +1930,14 @@ class ProjectTaskListCreateAPIView(APIView):
                 team_leader=user
             )
 
-        elif role == 'Client' or user.is_client:
-            tasks = tasks.filter(
-                project__user_client=user
+        else:
+            return Response(
+                {
+                    'error': 'You do not have permission to view tasks.'
+                },
+                status=status.HTTP_403_FORBIDDEN
             )
 
-        else:
-            tasks = tasks.none()
-
-        # Search Filter
         search = request.query_params.get('search', '').strip()
 
         if search:
@@ -1766,7 +1945,6 @@ class ProjectTaskListCreateAPIView(APIView):
                 Q(task_title__icontains=search)
             )
 
-        # Validate Project ID and Developer ID
         query_serializer = ProjectTaskListQuerySerializer(
             data=request.query_params
         )
@@ -1786,7 +1964,13 @@ class ProjectTaskListCreateAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Project ID Filter
+            error = next(iter(errors.values()))[0]
+
+            return Response(
+                {'error': str(error)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         project_id = query_serializer.validated_data.get(
             'project_id', ''
         )
@@ -1794,7 +1978,6 @@ class ProjectTaskListCreateAPIView(APIView):
         if project_id:
             tasks = tasks.filter(project_id=int(project_id))
 
-        # Task Status Filter
         task_status = request.query_params.get(
             'task_status', ''
         ).strip()
@@ -1804,7 +1987,6 @@ class ProjectTaskListCreateAPIView(APIView):
                 task_status_master__name__iexact=task_status
             )
 
-        # Developer ID Filter
         developer_id = query_serializer.validated_data.get(
             'developer_id', ''
         )
@@ -1827,6 +2009,24 @@ class ProjectTaskListCreateAPIView(APIView):
 
     def post(self, request):
 
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        allowed_roles = [
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Team Leader'
+        ]
+
+        if role not in allowed_roles:
+            return Response(
+                {
+                    'error': 'You do not have permission to create tasks. Only Super Admin, Admin, Manager and Team Leader can create tasks.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = ProjectTaskSerializer(
             data=request.data,
             context={'request': request}
@@ -1834,16 +2034,52 @@ class ProjectTaskListCreateAPIView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
+        if (
+            role == 'Team Leader'
+            and 'team_leader' in serializer.validated_data
+        ):
+            return Response(
+                {
+                    'error': 'Team Leaders can assign Developers only.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        project = serializer.validated_data.get('project')
+
+        if role == 'Manager':
+            if project.assigned_manager_id != user.id:
+                return Response(
+                    {
+                        'error': 'You can create tasks only in your assigned projects.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        elif role == 'Team Leader':
+            if not project.team_leaders.filter(id=user.id).exists():
+                return Response(
+                    {
+                        'error': 'You can create tasks only in projects assigned to you.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         task = serializer.save(
             created_by=request.user,
-            modified_by=request.user
+            modified_by=None
+        )
+
+        response_serializer = ProjectTaskSerializer(
+            task,
+            context={
+                'request': request,
+                'is_create_response': True
+            }
         )
 
         return Response(
-            ProjectTaskSerializer(
-                task,
-                context={'request': request}
-            ).data,
+            response_serializer.data,
             status=status.HTTP_201_CREATED
         )
 
@@ -1870,11 +2106,6 @@ class ProjectTaskDetailAPIView(APIView):
         if role in ['Super Admin', 'Admin']:
             pass
 
-        elif role == 'Client':
-            tasks = tasks.filter(
-                project__user_client=user
-            )
-
         elif role == 'Manager':
             tasks = tasks.filter(
                 project__assigned_manager=user
@@ -1895,7 +2126,68 @@ class ProjectTaskDetailAPIView(APIView):
 
         return tasks.distinct()
 
+    def get_editable_task(self, request, pk):
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        task = get_object_or_404(
+            ProjectTask.objects.select_related(
+                'project', 'created_by'
+            ),
+            pk=pk
+        )
+
+        if role in ['Super Admin', 'Admin']:
+            return task
+
+        if role == 'Manager':
+            if (
+                task.project.assigned_manager_id == user.id
+                and (
+                    task.created_by_id == user.id
+                    or (
+                        task.created_by
+                        and task.created_by.profile
+                        and task.created_by.profile.name == 'Team Leader'
+                    )
+                )
+            ):
+                return task
+
+            return None
+
+        if role == 'Team Leader':
+            if (
+                task.created_by_id == user.id
+                and task.project.team_leaders.filter(
+                    id=user.id
+                ).exists()
+            ):
+                return task
+
+            return None
+
+        return None
+
     def get(self, request, pk):
+
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role not in [
+            'Super Admin',
+            'Admin',
+            'Manager',
+            'Team Leader',
+            'Developer'
+        ]:
+            return Response(
+                {
+                    'error': 'You do not have permission to view tasks.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         task = get_object_or_404(
             self.get_user_tasks(request),
@@ -1911,10 +2203,18 @@ class ProjectTaskDetailAPIView(APIView):
 
     def put(self, request, pk):
 
-        task = get_object_or_404(
-            self.get_user_tasks(request),
-            pk=pk
-        )
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        task = self.get_editable_task(request, pk)
+
+        if not task:
+            return Response(
+                {
+                    'error': 'You do not have permission to update this task.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ProjectTaskSerializer(
             task,
@@ -1923,6 +2223,30 @@ class ProjectTaskDetailAPIView(APIView):
         )
 
         serializer.is_valid(raise_exception=True)
+
+        project = serializer.validated_data.get(
+            'project', task.project
+        )
+
+        if role == 'Manager':
+            if project.assigned_manager_id != user.id:
+                return Response(
+                    {
+                        'error': 'You can update tasks only in your assigned projects.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        elif role == 'Team Leader':
+            if not project.team_leaders.filter(
+                id=user.id
+            ).exists():
+                return Response(
+                    {
+                        'error': 'You can update tasks only in projects assigned to you.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
         task = serializer.save(modified_by=request.user)
 
@@ -1935,10 +2259,18 @@ class ProjectTaskDetailAPIView(APIView):
 
     def patch(self, request, pk):
 
-        task = get_object_or_404(
-            self.get_user_tasks(request),
-            pk=pk
-        )
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        task = self.get_editable_task(request, pk)
+
+        if not task:
+            return Response(
+                {
+                    'error': 'You do not have permission to update this task.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = ProjectTaskSerializer(
             task,
@@ -1948,6 +2280,30 @@ class ProjectTaskDetailAPIView(APIView):
         )
 
         serializer.is_valid(raise_exception=True)
+
+        project = serializer.validated_data.get(
+            'project', task.project
+        )
+
+        if role == 'Manager':
+            if project.assigned_manager_id != user.id:
+                return Response(
+                    {
+                        'error': 'You can update tasks only in your assigned projects.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        elif role == 'Team Leader':
+            if not project.team_leaders.filter(
+                id=user.id
+            ).exists():
+                return Response(
+                    {
+                        'error': 'You can update tasks only in projects assigned to you.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
         task = serializer.save(modified_by=request.user)
 
@@ -1960,10 +2316,15 @@ class ProjectTaskDetailAPIView(APIView):
 
     def delete(self, request, pk):
 
-        task = get_object_or_404(
-            self.get_user_tasks(request),
-            pk=pk
-        )
+        task = self.get_editable_task(request, pk)
+
+        if not task:
+            return Response(
+                {
+                    'error': 'You do not have permission to delete this task.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         task.delete()
 
@@ -1983,26 +2344,26 @@ class TaskCommentListCreateAPIView(APIView):
 
     def get(self, request):
 
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role == 'Client':
+            return Response(
+                {
+                    "success": False,
+                    "message": "Clients do not have permission to view comments.",
+                    "errors": {}
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         comments = TaskComment.objects.select_related(
             'task', 'user', 'task__project'
         ).order_by('id')
 
-        # Role-Based Comment Access
-        user = request.user
-        role = user.profile.name if user.profile else ''
+        accessible_tasks = ProjectTask.objects.all()
 
-        if role in ['Super Admin', 'Admin']:
-            accessible_tasks = ProjectTask.objects.all()
 
-        elif role == 'Client':
-            accessible_tasks = ProjectTask.objects.filter(
-                project__user_client=user
-            )
-
-        else:
-            accessible_tasks = ProjectTask.objects.none()
-
-        # Task ID Filter
         query_serializer = TaskCommentListQuerySerializer(
             data=request.query_params
         )
@@ -2037,7 +2398,7 @@ class TaskCommentListCreateAPIView(APIView):
                 return Response(
                     {
                         "success": False,
-                        "message": "Only the assigned Client can access comments for this task.",
+                        "message": "You do not have permission to access comments for this task.",
                         "errors": {}
                     },
                     status=status.HTTP_403_FORBIDDEN
@@ -2046,16 +2407,6 @@ class TaskCommentListCreateAPIView(APIView):
             comments = comments.filter(task_id=int(task_id))
 
         else:
-
-            if role not in ['Super Admin', 'Admin', 'Client']:
-                return Response(
-                    {
-                        "success": False,
-                        "message": "Only the assigned Client can access comments for this task.",
-                        "errors": {}
-                    },
-                    status=status.HTTP_403_FORBIDDEN
-                )
 
             comments = comments.filter(
                 task__in=accessible_tasks
@@ -2076,6 +2427,19 @@ class TaskCommentListCreateAPIView(APIView):
 
     def post(self, request):
 
+        user = request.user
+        role = user.profile.name if user.profile else ''
+
+        if role == 'Client':
+            return Response(
+                {
+                    "success": False,
+                    "message": "Clients do not have permission to add comments.",
+                    "errors": {}
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = TaskCommentSerializer(
             data=request.data,
             context={'request': request}
@@ -2085,10 +2449,14 @@ class TaskCommentListCreateAPIView(APIView):
 
         comment = serializer.save(user=request.user)
 
+        response_data = TaskCommentSerializer(
+            comment,
+            context={'request': request}
+        ).data
+
+        response_data.pop('updated_at', None)
+
         return Response(
-            TaskCommentSerializer(
-                comment,
-                context={'request': request}
-            ).data,
+            response_data,
             status=status.HTTP_201_CREATED
         )
