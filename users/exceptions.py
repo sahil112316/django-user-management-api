@@ -4,6 +4,7 @@ import logging
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ParseError
 from django.http import JsonResponse
 
 
@@ -18,14 +19,22 @@ def custom_exception_handler(exc, context):
 
         error_data = response.data
 
-        # Validation errors
+        # Validation and JSON Parsing Errors
         if response.status_code == status.HTTP_400_BAD_REQUEST:
 
-            result = {
-                "success": False,
-                "message": "Validation failed.",
-                "errors": error_data
-            }
+            if isinstance(exc, ParseError):
+                result = {
+                    "success": False,
+                    "message": "Invalid JSON format. Please provide valid JSON.",
+                    "errors": {}
+                }
+
+            else:
+                result = {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": error_data
+                }
 
         # Not found errors
         elif response.status_code == status.HTTP_404_NOT_FOUND:

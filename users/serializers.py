@@ -666,6 +666,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 'Invalid request data. Expected a JSON object.'
             )
 
+        # Validate Unknown Fields
+        allowed_fields = set(self.fields.keys())
+        invalid_fields = set(data.keys()) - allowed_fields
+
+        if invalid_fields:
+            raise serializers.ValidationError({
+                field: 'This field is not allowed.'
+                for field in invalid_fields
+            })
+
         return data
 
     def validate(self, attrs):
@@ -732,6 +742,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 }
 
         return super().update(instance, validated_data)
+
 
 #11. Client List Query Parameter Validation
 class ClientListQuerySerializer(serializers.Serializer):

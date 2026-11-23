@@ -317,6 +317,7 @@ class UserListCreateAPIView(APIView):
         )
 
 #3.User Retrieve, Update, Partial Update and Soft Delete API
+
 class UserDetailAPIView(APIView):
     renderer_classes = [JSONRenderer]
     authentication_classes = [JWTAuthentication]
@@ -329,11 +330,14 @@ class UserDetailAPIView(APIView):
         role = profile.name if profile else None
         return role in ['Super Admin', 'Admin']
 
-    # Check Client by Profile
+    # Check Client by Profile / is_client Flag
     def is_client_user(self, user):
         return (
-            user.profile is not None
-            and user.profile.name.strip().lower() == 'client'
+            getattr(user, 'is_client', False)
+            or (
+                user.profile is not None
+                and user.profile.name.strip().lower() == 'client'
+            )
         )
 
     # Get Active User / Client Details
@@ -369,13 +373,13 @@ class UserDetailAPIView(APIView):
     # Update Active User / Client (PUT)
     def put(self, request, pk):
 
-        request_data_serializer = UserUpdateSerializer()
-
-        try:
-            request_data_serializer.validate_request_data(request.data)
-        except ValidationError as exc:
+        # Validate Action
+        if (
+            'action' in request.data
+            and request.data.get('action') != 'delete'
+        ):
             return Response(
-                {'error': str(exc.detail[0])},
+                {'error': 'Invalid action. Only "delete" is allowed.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -434,6 +438,16 @@ class UserDetailAPIView(APIView):
                     'is_deleted': user.is_deleted
                 },
                 status=status.HTTP_200_OK
+            )
+
+        request_data_serializer = UserUpdateSerializer()
+
+        try:
+            request_data_serializer.validate_request_data(request.data)
+        except ValidationError as exc:
+            return Response(
+                {'error': exc.detail},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         # Allow Admin / Super Admin or Own Data Update
@@ -523,6 +537,9 @@ class UserDetailAPIView(APIView):
                 context={'request': request}
             ).data
         )
+
+
+
 # 4. User JSON Profile Configuration API
 
 class UserProfileDetailAPIView(APIView):
