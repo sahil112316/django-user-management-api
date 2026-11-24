@@ -4,11 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 #Default Profile
 def get_default_profile():
-    return {
-        "role": "Standard",
-        "is_active": True,
-        "is_default": True
-    }
+    return {"role": "Standard","is_active": True,"is_default": True}
 
 #Basemodel
 class BaseModel(models.Model):
@@ -23,6 +19,7 @@ class BaseModel(models.Model):
 
 #UserModel
 class User(AbstractUser, BaseModel):
+
     username = models.CharField(max_length=150, unique=True, null=True, blank=True)
     profiles = models.JSONField(default=get_default_profile, null=True, blank=True)
     is_client = models.BooleanField(default=False, db_index=True)
@@ -49,98 +46,36 @@ class User(AbstractUser, BaseModel):
 
 #Client Model
 class Client(BaseModel):
+
     first_name = models.CharField(max_length=50, null=True, blank=True)
     last_name = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
     contact_no = models.CharField(max_length=15, null=True, blank=True)
     email_id = models.EmailField(unique=True, null=True, blank=True)
-    status = models.CharField(
-        max_length=10,
-        choices=[('Active', 'Active'), ('Inactive', 'Inactive')],
-        default='Active',
-        null=True,
-        blank=True
-    )
+    status = models.CharField(max_length=10,choices=[('Active', 'Active'), ('Inactive', 'Inactive')],default='Active',null=True,blank=True)
  
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-
-#  ProjectModel
+# ProjectModel
 class Project(BaseModel):
 
-    project_title = models.CharField(max_length=150, null=True, blank=True)
+    project_title = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
-
-    project_type_master = models.ForeignKey(
-        'ProjectType',
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='projects'
-    )
-
+    project_type_master = models.ForeignKey('ProjectType',on_delete=models.PROTECT,null=True,blank=True,related_name='projects')
     start_date = models.DateField(auto_now_add=True)
     date_of_completion = models.DateField(null=True, blank=True)
-
-    project_status_master = models.ForeignKey(
-        'ProjectStatus',
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='projects'
-    )
-
-    status = models.CharField(
-        max_length=10,
-        choices=[
-            ('Active', 'Active'),
-            ('Inactive', 'Inactive')
-        ],
-        default='Active',
-        null=True,
-        blank=True
-    )
-
-    client = models.ForeignKey(
-        Client,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='projects'
-    )
-
-    user_client = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='user_client_projects',
-        limit_choices_to={'profile__name': 'Client'}
-    )
-
-    assigned_manager = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='managed_projects',
-        limit_choices_to={'profile__name': 'Manager'}
-    )
-
-    team_leaders = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        blank=True,
-        related_name='assigned_team_leader_projects',
-        limit_choices_to={'profile__name': 'Team Leader'}
-    )
-
+    project_status_master = models.ForeignKey('ProjectStatus',on_delete=models.PROTECT,null=True,blank=True,related_name='projects')
+    status = models.CharField(max_length=10,choices=[('Active', 'Active'),('Inactive', 'Inactive')],default='Active',null=True,blank=True)
+    client = models.ForeignKey(Client,on_delete=models.CASCADE,null=True,blank=True,related_name='projects')
+    user_client = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='user_client_projects',limit_choices_to={'profile__name': 'Client'})
+    assigned_manager = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='managed_projects',limit_choices_to={'profile__name': 'Manager'})
+    team_leaders = models.ManyToManyField(settings.AUTH_USER_MODEL,blank=True,related_name='assigned_team_leader_projects',limit_choices_to={'profile__name': 'Team Leader'})
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return self.project_title if self.project_title else "Project"
-
     
 # ProjectAttachment Model
 class ProjectAttachment(models.Model):
@@ -154,7 +89,6 @@ class ProjectAttachment(models.Model):
         return f"Attachment for {self.project}"
 
 # ProjectTask Model
-
 class ProjectTask(BaseModel):
 
     task_title = models.CharField(max_length=255)
@@ -231,15 +165,7 @@ class ProfileQuerySet(models.QuerySet):
 #  Profile Model
 class Profile(BaseModel):
 
-    DEFAULT_PROFILES = [
-        'Super Admin',
-        'Admin',
-        'Manager',
-        'Team Leader',
-        'Developer',
-        'Human Resource',
-    ]
-
+    DEFAULT_PROFILES = ['Super Admin','Admin','Manager','Team Leader','Developer','Human Resource',]
     name = models.CharField(max_length=100, unique=True)
     profile_data = models.JSONField(default=get_default_profile, blank=True)
     description = models.TextField(null=True, blank=True)

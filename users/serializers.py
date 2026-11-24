@@ -77,7 +77,6 @@ class FlexibleManagerField(serializers.RelatedField):
 
         return user
 
-
 # 2. User Login Serializer
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(
@@ -305,7 +304,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         attrs['user'] = user
         return attrs
 
-
 # 6. User List Query Parameter Validation
 class UserListQuerySerializer(serializers.Serializer):
 
@@ -438,7 +436,6 @@ class UserAuditSerializer(serializers.ModelSerializer):
             'role': obj.profile.name,
             'is_default': obj.profile.is_default
         }
-
 
 #8. User Details Serializer
 
@@ -731,9 +728,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        profile = validated_data.get('profile', serializers.empty)
+        profile = validated_data.pop('profile', serializers.empty)
 
         if profile is not serializers.empty:
+            instance.profile = profile
+
             if profile is not None:
                 validated_data['profiles'] = profile.profile_data
             else:
@@ -743,8 +742,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-
 #11. Client List Query Parameter Validation
+
 class ClientListQuerySerializer(serializers.Serializer):
 
     status = serializers.CharField(
@@ -801,9 +800,8 @@ class ClientListQuerySerializer(serializers.Serializer):
 
         return value
 
-
-
 #12. Client Serializer
+
 class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -1298,9 +1296,6 @@ class ProjectTaskListQuerySerializer(serializers.Serializer):
 
 # 24. Project Serializer
 
-
-
-
 class ProjectSerializer(serializers.ModelSerializer):
 
     client_id = ClientDetailsField(
@@ -1355,10 +1350,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     title = serializers.CharField(
         source='project_title',
         required=False,
-        allow_null=True,
+        allow_null=False,
         error_messages={
+            'required': 'Please provide a project title.',
             'invalid': 'Project title must be a valid string.',
-            'blank': 'Project title cannot be blank.'
+            'blank': 'Project title cannot be blank.',
+            'null': 'Project title cannot be null.'
         }
     )
 
@@ -1443,6 +1440,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         elif instance.user_client_id:
             data.pop('client_id', None)
 
+        # Hide team_leaders when no Team Leader is assigned
+        if not instance.team_leaders.exists():
+            data.pop('team_leaders', None)
+
         # Hide update fields only in creation response
         if self.context.get('is_create_response'):
             data.pop('updated_by', None)
@@ -1452,8 +1453,13 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
 
-        # Manager is required only when creating a new project
+        # Title and Manager are required only when creating a new project
         if self.instance is None:
+
+            errors = {}
+
+            if 'project_title' not in attrs:
+                errors['title'] = 'Please provide a project title.'
 
             manager = attrs.get(
                 'assigned_manager',
@@ -1461,9 +1467,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             )
 
             if manager is serializers.empty or manager is None:
-                raise serializers.ValidationError({
-                    'assigned_manager': 'Please assign a Manager to this project.'
-                })
+                errors['assigned_manager'] = 'Please assign a Manager to this project.'
+
+            if errors:
+                raise serializers.ValidationError(errors)
 
             # Team Leaders must be assigned after project creation
             if 'team_leaders' in self.initial_data:
@@ -1491,9 +1498,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_title(self, value):
-
-        if value is None:
-            return value
 
         value = value.strip()
 
@@ -1629,6 +1633,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             attachment.delete()
 
         return instance
+
 
 
 #25. Manager Details Serializer
@@ -2220,3 +2225,90 @@ class TaskCommentListQuerySerializer(serializers.Serializer):
         if value and (not value.isdigit() or int(value) <= 0):
             raise serializers.ValidationError('Invalid task_id.')
         return value
+
+
+
+# 36. Master Data CRUD Base Serializer
+
+class MasterDataCRUDSerializer(serializers.ModelSerializer):
+
+    name = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=100,
+        error_messages={
+            'required': 'Please provide a name.',
+            'invalid': 'Name must be a valid string.',
+            'blank': 'Name cannot be blank.',
+            'null': 'Name cannot be null.',
+            'max_length': 'Name cannot contain more than 100 characters.'
+        }
+    )
+
+    is_active = serializers.BooleanField(required=False)
+
+    class Meta:
+        fields = [
+            'id',
+            'name',
+            'is_active',
+            'created_by',
+            'modified_by',
+            'created_at',
+            'updated_at'
+        ]
+
+        read_only_fields = [
+            'id',
+            'created_by',
+            'modified_by',
+            'created_at',
+            'updated_at'
+        ]
+
+    def validate_name(self, value):
+
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                'Name cannot be blank.'
+            )
+
+        queryset = self.Meta.model.objects.filter(
+            name__iexact=value
+        )
+
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                'This name already exists.'
+            )
+
+        return value
+
+
+# 37. Project Type CRUD Serializer
+
+class ProjectTypeCRUDSerializer(MasterDataCRUDSerializer):
+
+    class Meta(MasterDataCRUDSerializer.Meta):
+        model = ProjectType
+
+
+# 38. Project Status CRUD Serializer
+
+class ProjectStatusCRUDSerializer(MasterDataCRUDSerializer):
+
+    class Meta(MasterDataCRUDSerializer.Meta):
+        model = ProjectStatus
+
+
+# 39. Task Status CRUD Serializer
+
+class TaskStatusCRUDSerializer(MasterDataCRUDSerializer):
+
+    class Meta(MasterDataCRUDSerializer.Meta):
+        model = TaskStatus

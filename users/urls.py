@@ -23,6 +23,12 @@ from .views import (
     ProjectTaskListCreateAPIView,
     ProjectTaskDetailAPIView,
     TaskCommentListCreateAPIView,
+    ProjectTypeListCreateAPIView,
+    ProjectTypeDetailAPIView,
+    ProjectStatusListCreateAPIView,
+    ProjectStatusDetailAPIView,
+    TaskStatusListCreateAPIView,
+    TaskStatusDetailAPIView,
 )
 
 from .exceptions import invalid_api_url
@@ -146,6 +152,42 @@ urlpatterns = [
         'clients/<int:pk>/',
         ClientDetailAPIView.as_view(),
         name='client-detail'
+    ),
+
+    # Project Type CRUD APIs
+    path(
+        'project-types/',
+        ProjectTypeListCreateAPIView.as_view(),
+        name='project-type-list-create'
+    ),
+    path(
+        'project-types/<int:pk>/',
+        ProjectTypeDetailAPIView.as_view(),
+        name='project-type-detail'
+    ),
+
+    # Project Status CRUD APIs
+    path(
+        'project-statuses/',
+        ProjectStatusListCreateAPIView.as_view(),
+        name='project-status-list-create'
+    ),
+    path(
+        'project-statuses/<int:pk>/',
+        ProjectStatusDetailAPIView.as_view(),
+        name='project-status-detail'
+    ),
+
+    # Task Status CRUD APIs
+    path(
+        'task-statuses/',
+        TaskStatusListCreateAPIView.as_view(),
+        name='task-status-list-create'
+    ),
+    path(
+        'task-statuses/<int:pk>/',
+        TaskStatusDetailAPIView.as_view(),
+        name='task-status-detail'
     ),
 
     path(

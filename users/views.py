@@ -21,7 +21,8 @@ from rest_framework.exceptions import ValidationError
 
 from .models import (
     User, Client, Project, Profile,
-    ProjectTask, TaskComment, get_default_profile
+    ProjectTask, TaskComment, get_default_profile,
+    ProjectType, ProjectStatus, TaskStatus
 )
 
 
@@ -48,6 +49,9 @@ from .serializers import (
     ProjectTaskListQuerySerializer,
     TaskCommentListQuerySerializer,
     UserClientSerializer,
+    ProjectTypeCRUDSerializer,
+    ProjectStatusCRUDSerializer,
+    TaskStatusCRUDSerializer,
 )
 
 # 1 Pagination Configuration
@@ -332,13 +336,12 @@ class UserDetailAPIView(APIView):
 
     # Check Client by Profile / is_client Flag
     def is_client_user(self, user):
-        return (
-            getattr(user, 'is_client', False)
-            or (
-                user.profile is not None
-                and user.profile.name.strip().lower() == 'client'
-            )
-        )
+        profile = getattr(user, 'profile', None)
+
+        if profile:
+            return profile.name.strip().lower() == 'client'
+
+        return getattr(user, 'is_client', False)
 
     # Get Active User / Client Details
     def get(self, request, pk):
@@ -466,10 +469,13 @@ class UserDetailAPIView(APIView):
             status='Active'
         )
 
-        serializer_class = (
-            UserClientSerializer if self.is_client_user(user)
-            else UserUpdateSerializer
-        )
+        if self.has_user_management_permission(request):
+            serializer_class = UserUpdateSerializer
+        else:
+            serializer_class = (
+                UserClientSerializer if self.is_client_user(user)
+                else UserUpdateSerializer
+            )
 
         serializer = serializer_class(
             user,
@@ -511,10 +517,13 @@ class UserDetailAPIView(APIView):
             status='Active'
         )
 
-        serializer_class = (
-            UserClientSerializer if self.is_client_user(user)
-            else UserUpdateSerializer
-        )
+        if self.has_user_management_permission(request):
+            serializer_class = UserUpdateSerializer
+        else:
+            serializer_class = (
+                UserClientSerializer if self.is_client_user(user)
+                else UserUpdateSerializer
+            )
 
         serializer = serializer_class(
             user,
@@ -537,8 +546,6 @@ class UserDetailAPIView(APIView):
                 context={'request': request}
             ).data
         )
-
-
 
 # 4. User JSON Profile Configuration API
 
@@ -2477,3 +2484,171 @@ class TaskCommentListCreateAPIView(APIView):
             response_data,
             status=status.HTTP_201_CREATED
         )
+
+# 23. Master Data List and Create API
+
+class MasterDataListCreateAPIView(APIView):
+
+    renderer_classes = [JSONRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    model = None
+    serializer_class = None
+
+    def get(self, request):
+
+        records = self.model.objects.all().order_by('id')
+
+        serializer = self.serializer_class(
+            records,
+            many=True
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    def post(self, request):
+
+        serializer = self.serializer_class(
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        record = serializer.save(
+            created_by=request.user,
+            modified_by=None
+        )
+
+        return Response(
+            self.serializer_class(record).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+# 24. Master Data Retrieve, Update, Partial Update and Delete API
+
+class MasterDataDetailAPIView(APIView):
+
+    renderer_classes = [JSONRenderer]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    model = None
+    serializer_class = None
+
+    def get_object(self, pk):
+
+        return get_object_or_404(
+            self.model,
+            pk=pk
+        )
+
+    def get(self, request, pk):
+
+        record = self.get_object(pk)
+
+        serializer = self.serializer_class(record)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    def put(self, request, pk):
+
+        record = self.get_object(pk)
+
+        serializer = self.serializer_class(
+            record,
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(modified_by=request.user)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    def patch(self, request, pk):
+
+        record = self.get_object(pk)
+
+        serializer = self.serializer_class(
+            record,
+            data=request.data,
+            partial=True
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(modified_by=request.user)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    def delete(self, request, pk):
+
+        record = self.get_object(pk)
+
+        try:
+            record.delete()
+
+        except ProtectedError:
+            return Response(
+                {
+                    'error': 'This record cannot be deleted because it is associated with existing records.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {
+                'message': 'Record deleted successfully.'
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+# 25. Project Type CRUD APIs
+
+class ProjectTypeListCreateAPIView(MasterDataListCreateAPIView):
+    model = ProjectType
+    serializer_class = ProjectTypeCRUDSerializer
+
+
+class ProjectTypeDetailAPIView(MasterDataDetailAPIView):
+    model = ProjectType
+    serializer_class = ProjectTypeCRUDSerializer
+
+
+# 26. Project Status CRUD APIs
+
+class ProjectStatusListCreateAPIView(MasterDataListCreateAPIView):
+    model = ProjectStatus
+    serializer_class = ProjectStatusCRUDSerializer
+
+
+class ProjectStatusDetailAPIView(MasterDataDetailAPIView):
+    model = ProjectStatus
+    serializer_class = ProjectStatusCRUDSerializer
+
+
+# 27. Task Status CRUD APIs
+
+class TaskStatusListCreateAPIView(MasterDataListCreateAPIView):
+    model = TaskStatus
+    serializer_class = TaskStatusCRUDSerializer
+
+
+class TaskStatusDetailAPIView(MasterDataDetailAPIView):
+    model = TaskStatus
+    serializer_class = TaskStatusCRUDSerializer
