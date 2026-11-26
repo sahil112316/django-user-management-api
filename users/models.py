@@ -116,7 +116,6 @@ class ProjectType(BaseModel):
     def __str__(self):
         return self.name
 
-
 # Project Status Model
 class ProjectStatus(BaseModel):
     name = models.CharField(max_length=100, unique=True)
@@ -125,7 +124,6 @@ class ProjectStatus(BaseModel):
     def __str__(self):
         return self.name
 
-
 # Task Status Model
 class TaskStatus(BaseModel):
     name = models.CharField(max_length=100, unique=True)
@@ -133,7 +131,6 @@ class TaskStatus(BaseModel):
 
     def __str__(self):
         return self.name
-
 
 # Task Comment Model
 class TaskComment(BaseModel):

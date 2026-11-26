@@ -76,7 +76,6 @@ class UserListCreateAPIView(APIView):
 
     def get(self, request):
 
-
         is_admin = self.has_user_management_permission(request)
 
         query_serializer = UserListQuerySerializer(
@@ -125,8 +124,15 @@ class UserListCreateAPIView(APIView):
                 )
                 is_client = False
 
+            user_profile = getattr(request.user, 'profile', None)
+
+            if user_profile and user_profile.name == 'Admin':
+                base_users = base_users.exclude(
+                    Q(profile__name__iexact='Super Admin') |
+                    Q(created_by__profile__name__iexact='Super Admin')
+                )
+
         else:
-            # Normal User / Client Can Access Only Own Data
             base_users = User.objects.filter(
                 id=request.user.id
             )
@@ -250,7 +256,6 @@ class UserListCreateAPIView(APIView):
 
         response = paginator.get_paginated_response(serializer.data)
 
-        # Add Overall User / Client Counts
         if is_client:
             response.data.update({
                 'total_clients': total_count,
@@ -266,10 +271,8 @@ class UserListCreateAPIView(APIView):
 
         return response
 
-    # Create User / Client Through Profile
     def post(self, request):
 
-        # Check Super Admin / Admin Permission
         if not self.has_user_management_permission(request):
             return Response(
                 {'error': 'Only Super Admin and Admin can create users.'},
@@ -286,7 +289,6 @@ class UserListCreateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate and Create User / Client
         serializer = UserCreateSerializer(
             data=request.data,
             context={'request': request}
@@ -295,6 +297,18 @@ class UserListCreateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         profile = serializer.validated_data.get('profile')
+
+        user_profile = getattr(request.user, 'profile', None)
+
+        if (
+            user_profile and user_profile.name == 'Admin' and
+            profile and profile.name.lower() == 'super admin'
+        ):
+            return Response(
+                {'error': 'Admin cannot create a Super Admin user.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         is_client = (
             profile and profile.name.lower() == 'client'
         )
@@ -304,7 +318,6 @@ class UserListCreateAPIView(APIView):
             modified_by=None
         )
 
-        # Return Same User Format for User and Client
         response_serializer = UserCreateSerializer(
             user,
             context={'request': request}
@@ -312,7 +325,6 @@ class UserListCreateAPIView(APIView):
 
         response_data = response_serializer.data.copy()
 
-        # Hide updated_at from Creation Response
         response_data.pop('updated_at', None)
 
         return Response(
@@ -328,13 +340,25 @@ class UserDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserUpdateSerializer
 
-    # Check Super Admin / Admin Permission
     def has_user_management_permission(self, request):
         profile = getattr(request.user, 'profile', None)
         role = profile.name if profile else None
         return role in ['Super Admin', 'Admin']
 
-    # Check Client by Profile / is_client Flag
+    def get_accessible_users(self, request):
+        profile = getattr(request.user, 'profile', None)
+        role = profile.name if profile else None
+
+        users = User.objects.all()
+
+        if role == 'Admin':
+            users = users.exclude(
+                Q(profile__name__iexact='Super Admin') |
+                Q(created_by__profile__name__iexact='Super Admin')
+            )
+
+        return users
+
     def is_client_user(self, user):
         profile = getattr(user, 'profile', None)
 
@@ -343,7 +367,6 @@ class UserDetailAPIView(APIView):
 
         return getattr(user, 'is_client', False)
 
-    # Get Active User / Client Details
     def get(self, request, pk):
 
         if (
@@ -356,7 +379,7 @@ class UserDetailAPIView(APIView):
             )
 
         user = get_object_or_404(
-            User,
+            self.get_accessible_users(request),
             pk=pk,
             status='Active'
         )
@@ -386,7 +409,6 @@ class UserDetailAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Delete Only Admin / Super Admin
         if request.data.get('action') == 'delete':
 
             if not self.has_user_management_permission(request):
@@ -396,12 +418,11 @@ class UserDetailAPIView(APIView):
                 )
 
             user = get_object_or_404(
-                User,
+                self.get_accessible_users(request),
                 pk=pk,
                 status='Active'
             )
 
-            # Client Soft Delete
             if self.is_client_user(user):
                 user.status = 'Inactive'
                 user.modified_by = request.user
@@ -453,7 +474,6 @@ class UserDetailAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Allow Admin / Super Admin or Own Data Update
         if (
             not self.has_user_management_permission(request)
             and request.user.pk != pk
@@ -464,7 +484,7 @@ class UserDetailAPIView(APIView):
             )
 
         user = get_object_or_404(
-            User,
+            self.get_accessible_users(request),
             pk=pk,
             status='Active'
         )
@@ -501,7 +521,6 @@ class UserDetailAPIView(APIView):
     # Update Active User / Client (PATCH)
     def patch(self, request, pk):
 
-        # Allow Admin / Super Admin or Own Data Update
         if (
             not self.has_user_management_permission(request)
             and request.user.pk != pk
@@ -512,7 +531,7 @@ class UserDetailAPIView(APIView):
             )
 
         user = get_object_or_404(
-            User,
+            self.get_accessible_users(request),
             pk=pk,
             status='Active'
         )
@@ -546,6 +565,7 @@ class UserDetailAPIView(APIView):
                 context={'request': request}
             ).data
         )
+
 
 # 4. User JSON Profile Configuration API
 
@@ -855,7 +875,6 @@ class ClientListCreateAPIView(APIView):
             request
         )
 
-    
         serializer = ClientSerializer(
             paginated_clients,
             many=True,
@@ -944,6 +963,7 @@ class ClientDetailAPIView(APIView):
 
 #12. Project List, Search, Filters, Pagination and Create API
 
+
 class ProjectListCreateAPIView(APIView):
     renderer_classes = [JSONRenderer]
     authentication_classes = [JWTAuthentication]
@@ -1001,8 +1021,13 @@ class ProjectListCreateAPIView(APIView):
         user = request.user
         role = user.profile.name if user.profile else ''
 
-        if role in ['Super Admin', 'Admin']:
+        if role == 'Super Admin':
             pass
+
+        elif role == 'Admin':
+            projects = projects.exclude(
+                created_by__profile__name__iexact='Super Admin'
+            )
 
         elif role == 'Manager':
             projects = projects.filter(
@@ -1214,7 +1239,6 @@ class ProjectListCreateAPIView(APIView):
                 created_at__date__lte=parse_date(created_to)
             )
 
-
         paginator = ClientPagination()
 
         paginated_projects = paginator.paginate_queryset(
@@ -1230,10 +1254,8 @@ class ProjectListCreateAPIView(APIView):
 
         return paginator.get_paginated_response(serializer.data)
 
-    
     def post(self, request):
 
-    
         user = request.user
         role = user.profile.name if user.profile else ''
 
@@ -1271,7 +1293,10 @@ class ProjectListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+
 # 13.Project Retrieve, Update, Partial Update and Soft Delete API
+
+
 
 class ProjectDetailAPIView(APIView):
     renderer_classes = [JSONRenderer]
@@ -1287,8 +1312,13 @@ class ProjectDetailAPIView(APIView):
         user = request.user
         role = user.profile.name if user.profile else ''
 
-        if role in ['Super Admin', 'Admin']:
+        if role == 'Super Admin':
             pass
+
+        elif role == 'Admin':
+            projects = projects.exclude(
+                created_by__profile__name__iexact='Super Admin'
+            )
 
         elif role == 'Manager':
             projects = projects.filter(
@@ -1335,10 +1365,26 @@ class ProjectDetailAPIView(APIView):
 
         if role == 'Manager':
 
-            if 'team_leaders' not in request.data or set(request.data.keys()) != {'team_leaders'}:
+            if request.data.get('action') == 'delete':
                 return Response(
                     {
-                        'error': 'Managers can only assign Team Leaders to their own projects.'
+                        'error': 'Only Admin and Super Admin can delete a project.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if 'type' in request.data:
+                return Response(
+                    {
+                        'type': 'Only Admin and Super Admin can change the project type.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if not request.data or not set(request.data.keys()).issubset({'team_leaders', 'status'}):
+                return Response(
+                    {
+                        'error': 'Managers can only update project status and assign Team Leaders to their own projects.'
                     },
                     status=status.HTTP_403_FORBIDDEN
                 )
@@ -1420,10 +1466,18 @@ class ProjectDetailAPIView(APIView):
 
         if role == 'Manager':
 
-            if 'team_leaders' not in request.data or set(request.data.keys()) != {'team_leaders'}:
+            if 'type' in request.data:
                 return Response(
                     {
-                        'error': 'Managers can only assign Team Leaders to their own projects.'
+                        'type': 'Only Admin and Super Admin can change the project type.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if not request.data or not set(request.data.keys()).issubset({'team_leaders', 'status'}):
+                return Response(
+                    {
+                        'error': 'Managers can only update project status and assign Team Leaders to their own projects.'
                     },
                     status=status.HTTP_403_FORBIDDEN
                 )
@@ -1472,6 +1526,10 @@ class ProjectDetailAPIView(APIView):
         serializer.save(modified_by=user)
 
         return Response(serializer.data)
+
+
+
+
 
 # 14. Profile List and Create API
 
@@ -1560,7 +1618,7 @@ class ProfileListAPIView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
-    
+
 #15. Profile Retrieve, Update, Partial Update and Permanent Delete API
 
 class ProfileDetailAPIView(APIView):
@@ -1800,6 +1858,7 @@ class UserRestoreAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
 # 18. Restore Inactive Clients API
 
 class ClientRestoreAPIView(APIView):
@@ -1917,6 +1976,7 @@ class ProjectRestoreAPIView(APIView):
 
 # 20 Project Task List, Search, Filter and Create API
 
+
 class ProjectTaskListCreateAPIView(APIView):
 
     renderer_classes = [JSONRenderer]
@@ -1936,8 +1996,13 @@ class ProjectTaskListCreateAPIView(APIView):
         user = request.user
         role = user.profile.name if user.profile else ''
 
-        if role in ['Super Admin', 'Admin']:
+        if role == 'Super Admin':
             pass
+
+        elif role == 'Admin':
+            tasks = tasks.exclude(
+                created_by__profile__name__iexact='Super Admin'
+            )
 
         elif role == 'Manager':
             tasks = tasks.filter(
@@ -2107,7 +2172,9 @@ class ProjectTaskListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+
 # 21. Project Task Detail API
+
 
 class ProjectTaskDetailAPIView(APIView):
 
@@ -2127,8 +2194,13 @@ class ProjectTaskDetailAPIView(APIView):
         user = request.user
         role = user.profile.name if user.profile else ''
 
-        if role in ['Super Admin', 'Admin']:
+        if role == 'Super Admin':
             pass
+
+        elif role == 'Admin':
+            tasks = tasks.exclude(
+                created_by__profile__name__iexact='Super Admin'
+            )
 
         elif role == 'Manager':
             tasks = tasks.filter(
@@ -2162,7 +2234,17 @@ class ProjectTaskDetailAPIView(APIView):
             pk=pk
         )
 
-        if role in ['Super Admin', 'Admin']:
+        if role == 'Super Admin':
+            return task
+
+        if role == 'Admin':
+            if (
+                task.created_by
+                and task.created_by.profile
+                and task.created_by.profile.name.lower() == 'super admin'
+            ):
+                return None
+
             return task
 
         if role == 'Manager':
@@ -2357,6 +2439,7 @@ class ProjectTaskDetailAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
+
 # 22. Task Comment List and Create API
 
 class TaskCommentListCreateAPIView(APIView):
@@ -2528,7 +2611,6 @@ class MasterDataListCreateAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-
 # 24. Master Data Retrieve, Update, Partial Update and Delete API
 
 class MasterDataDetailAPIView(APIView):
@@ -2617,18 +2699,15 @@ class MasterDataDetailAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-
 # 25. Project Type CRUD APIs
 
 class ProjectTypeListCreateAPIView(MasterDataListCreateAPIView):
     model = ProjectType
     serializer_class = ProjectTypeCRUDSerializer
 
-
 class ProjectTypeDetailAPIView(MasterDataDetailAPIView):
     model = ProjectType
     serializer_class = ProjectTypeCRUDSerializer
-
 
 # 26. Project Status CRUD APIs
 
@@ -2636,18 +2715,15 @@ class ProjectStatusListCreateAPIView(MasterDataListCreateAPIView):
     model = ProjectStatus
     serializer_class = ProjectStatusCRUDSerializer
 
-
 class ProjectStatusDetailAPIView(MasterDataDetailAPIView):
     model = ProjectStatus
     serializer_class = ProjectStatusCRUDSerializer
-
 
 # 27. Task Status CRUD APIs
 
 class TaskStatusListCreateAPIView(MasterDataListCreateAPIView):
     model = TaskStatus
     serializer_class = TaskStatusCRUDSerializer
-
 
 class TaskStatusDetailAPIView(MasterDataDetailAPIView):
     model = TaskStatus

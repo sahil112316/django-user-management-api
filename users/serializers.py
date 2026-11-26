@@ -438,7 +438,6 @@ class UserAuditSerializer(serializers.ModelSerializer):
         }
 
 #8. User Details Serializer
-
 class UserSerializer(serializers.ModelSerializer):
 
     profiles = serializers.SerializerMethodField()
@@ -467,7 +466,6 @@ class UserSerializer(serializers.ModelSerializer):
 
         data = super().to_representation(instance)
 
-        # Hide modified_by until user is updated
         if instance.modified_by_id is None:
             data.pop('modified_by', None)
 
@@ -488,7 +486,6 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 #9. User Create Serializer
-
 class UserCreateSerializer(serializers.ModelSerializer):
 
     profiles = serializers.PrimaryKeyRelatedField(
@@ -532,7 +529,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
         data = super().to_representation(instance)
 
-        # Hide modified_by until user is updated
+
         if instance.modified_by_id is None:
             data.pop('modified_by', None)
 
@@ -611,7 +608,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 #10. User Update Serializer
-
 class UserUpdateSerializer(serializers.ModelSerializer):
 
     profiles = serializers.PrimaryKeyRelatedField(
@@ -663,7 +659,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 'Invalid request data. Expected a JSON object.'
             )
 
-        # Validate Unknown Fields
         allowed_fields = set(self.fields.keys())
         invalid_fields = set(data.keys()) - allowed_fields
 
@@ -743,7 +738,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 #11. Client List Query Parameter Validation
-
 class ClientListQuerySerializer(serializers.Serializer):
 
     status = serializers.CharField(
@@ -801,7 +795,6 @@ class ClientListQuerySerializer(serializers.Serializer):
         return value
 
 #12. Client Serializer
-
 class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -829,7 +822,6 @@ class ClientSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
 #13 New Client Serializer using User model
-
 class UserClientSerializer(serializers.ModelSerializer):
 
     address = serializers.CharField(
@@ -975,7 +967,7 @@ class ClientDetailsField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return ProjectClientSerializer(value).data
-    
+
 # 16. User Client Details Serializer
 class UserClientDetailsSerializer(serializers.ModelSerializer):
 
@@ -1295,7 +1287,6 @@ class ProjectTaskListQuerySerializer(serializers.Serializer):
         return value
 
 # 24. Project Serializer
-
 class ProjectSerializer(serializers.ModelSerializer):
 
     client_id = ClientDetailsField(
@@ -1371,15 +1362,13 @@ class ProjectSerializer(serializers.ModelSerializer):
         }
     )
 
-    status = serializers.SlugRelatedField(
-        slug_field='name',
-        source='project_status_master',
-        queryset=ProjectStatus.objects.filter(is_active=True),
+    status = serializers.CharField(
         required=False,
         allow_null=True,
         error_messages={
-            'does_not_exist': 'Invalid project status. Please select a valid status.',
-            'invalid': 'Project status must be a valid status.'
+            'invalid': 'Project status must be a valid ID or name.',
+            'blank': 'Project status cannot be blank.',
+            'null': 'Project status cannot be null.'
         }
     )
 
@@ -1434,6 +1423,13 @@ class ProjectSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
+        # Display status from project_status_master
+        data['status'] = (
+            instance.project_status_master.name
+            if instance.project_status_master
+            else None
+        )
+
         if instance.client_id:
             data.pop('user_client_id', None)
 
@@ -1451,9 +1447,64 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate_status(self, value):
+
+        if value is None:
+            return None
+
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                'Project status cannot be blank.'
+            )
+
+        if value.isdigit():
+            status = ProjectStatus.objects.filter(
+                id=int(value),
+                is_active=True
+            ).first()
+
+            if not status:
+                raise serializers.ValidationError(
+                    'Invalid project status ID. Please select a valid status.'
+                )
+
+            return status
+
+        status = ProjectStatus.objects.filter(
+            name__iexact=value,
+            is_active=True
+        ).first()
+
+        if not status:
+            raise serializers.ValidationError(
+                'Invalid project status. Please select a valid status.'
+            )
+
+        return status
+
     def validate(self, attrs):
 
-        # Title and Manager are required only when creating a new project
+        request = self.context.get('request')
+
+        # Convert status into project_status_master
+        if 'status' in attrs:
+            attrs['project_status_master'] = attrs.pop('status')
+
+        if 'project_type_master' in attrs:
+
+            role = (
+                request.user.profile.name
+                if request and request.user.is_authenticated and request.user.profile
+                else ''
+            )
+
+            if role not in ['Super Admin', 'Admin']:
+                raise serializers.ValidationError({
+                    'type': 'Only Admin and Super Admin can change the project type.'
+                })
+
         if self.instance is None:
 
             errors = {}
@@ -1472,7 +1523,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             if errors:
                 raise serializers.ValidationError(errors)
 
-            # Team Leaders must be assigned after project creation
             if 'team_leaders' in self.initial_data:
                 raise serializers.ValidationError({
                     'team_leaders': 'Team Leaders can only be assigned after project creation.'
@@ -1531,7 +1581,15 @@ class ProjectSerializer(serializers.ModelSerializer):
             '.png', '.gif'
         ]
 
+        max_size = 10 * 1024 * 1024  # 10 MB per file
+
         for file in files:
+
+            if file.size > max_size:
+                raise serializers.ValidationError(
+                    f'{file.name}: File size cannot exceed 10 MB.'
+                )
+
             extension = '.' + file.name.split('.')[-1].lower()
 
             if extension not in allowed_extensions:
@@ -1633,8 +1691,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             attachment.delete()
 
         return instance
-
-
 
 #25. Manager Details Serializer
 class ManagerSerializer(serializers.ModelSerializer):
@@ -1871,8 +1927,6 @@ class ProfileUsersQuerySerializer(serializers.Serializer):
             )
 
 # 32. Project Task Serializer
-
-
 class ProjectTaskSerializer(serializers.ModelSerializer):
 
     project_id = serializers.PrimaryKeyRelatedField(
@@ -1946,16 +2000,14 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
         }
     )
 
-    task_status = serializers.SlugRelatedField(
-        slug_field='name',
+    task_status = serializers.CharField(
         source='task_status_master',
-        queryset=TaskStatus.objects.filter(is_active=True),
         required=True,
         allow_null=False,
         error_messages={
             'required': 'Please provide task status.',
-            'does_not_exist': 'Please provide a valid task status.',
-            'invalid': 'Task status must be a valid string.',
+            'invalid': 'Task status must be a valid ID or name.',
+            'blank': 'Task status cannot be blank.',
             'null': 'Task status cannot be null.'
         }
     )
@@ -2004,6 +2056,48 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
             'start_date': obj.project.start_date,
             'date_of_completion': obj.project.date_of_completion
         }
+
+    def validate_task_status(self, value):
+
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                'Task status cannot be blank.'
+            )
+
+        if value.isdigit():
+
+            status = TaskStatus.objects.filter(
+                id=int(value),
+                is_active=True
+            ).first()
+
+            if not status:
+                raise serializers.ValidationError(
+                    'Please provide a valid task status ID.'
+                )
+
+            return status
+
+        status = TaskStatus.objects.filter(
+            name__iexact=value,
+            is_active=True
+        ).first()
+
+        if not status:
+            raise serializers.ValidationError(
+                'Please provide a valid task status.'
+            )
+
+        return status
+
+    def get_task_status_response(self, instance):
+
+        if instance.task_status_master:
+            return instance.task_status_master.name
+
+        return None
 
     def validate_developers(self, developers):
 
@@ -2067,9 +2161,12 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
 
         data = super().to_representation(instance)
 
-        # Hide update fields only in creation response
+        data['task_status'] = self.get_task_status_response(instance)
+
+        if instance.modified_by is None:
+            data.pop('modified_by', None)
+
         if self.context.get('is_create_response'):
-            data['modified_by'] = None
             data.pop('updated_at', None)
 
             request = self.context.get('request')
@@ -2083,9 +2180,7 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
 
         return data
 
-
 # 33. Task Comment Serializer
-
 class TaskCommentSerializer(serializers.ModelSerializer):
 
     task_id = serializers.PrimaryKeyRelatedField(
@@ -2226,10 +2321,7 @@ class TaskCommentListQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid task_id.')
         return value
 
-
-
 # 36. Master Data CRUD Base Serializer
-
 class MasterDataCRUDSerializer(serializers.ModelSerializer):
 
     name = serializers.CharField(
@@ -2289,25 +2381,29 @@ class MasterDataCRUDSerializer(serializers.ModelSerializer):
 
         return value
 
+    def to_representation(self, instance):
+
+        data = super().to_representation(instance)
+
+        if instance.modified_by_id is None:
+            data.pop('modified_by', None)
+            data.pop('updated_at', None)
+
+        return data
 
 # 37. Project Type CRUD Serializer
-
 class ProjectTypeCRUDSerializer(MasterDataCRUDSerializer):
 
     class Meta(MasterDataCRUDSerializer.Meta):
         model = ProjectType
 
-
 # 38. Project Status CRUD Serializer
-
 class ProjectStatusCRUDSerializer(MasterDataCRUDSerializer):
 
     class Meta(MasterDataCRUDSerializer.Meta):
         model = ProjectStatus
 
-
 # 39. Task Status CRUD Serializer
-
 class TaskStatusCRUDSerializer(MasterDataCRUDSerializer):
 
     class Meta(MasterDataCRUDSerializer.Meta):
